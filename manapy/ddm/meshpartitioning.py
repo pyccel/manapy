@@ -94,31 +94,33 @@ def seqmesh(filename):
 
     #load mesh
     mesh = load_gmsh_mesh(filename)
+    
+    print(mesh.cells["triangle"], mesh.cells["line"])
 
     #coordinates x, y of each node
-    nodes = create_nodes(mesh)
+    #nodes = create_nodes(mesh)
     #nodes of each cell
-    cell_nodeid = create_cell_nodeid(mesh)
+    #cell_nodeid = create_cell_nodeid(mesh)
 
-    ghost_nodes = define_ghost_node(mesh, nodes)
+    #ghost_nodes = define_ghost_node(mesh, nodes)
 
-    if os.path.exists("mesh"+str(0)+".txt"):
-        os.remove("mesh"+str(0)+".txt")
-
-    with open("mesh"+str(0)+".txt", "a") as text_file:
-        text_file.write("elements\n")
-        np.savetxt(text_file, cell_nodeid, fmt='%u')
-        text_file.write("endelements\n")
-
-
-    with open("mesh"+str(0)+".txt", "a") as text_file:
-        text_file.write("nodes\n")
-        for i in range(len(nodes)):
-            for j in range(3):
-                text_file.write(str(nodes[i][j])+str(" "))
-            text_file.write(str(ghost_nodes[i]))
-            text_file.write("\n")
-        text_file.write("endnodes\n")
+#    if os.path.exists("mesh"+str(0)+".txt"):
+#        os.remove("mesh"+str(0)+".txt")
+#
+#    with open("mesh"+str(0)+".txt", "a") as text_file:
+#        text_file.write("elements\n")
+#        np.savetxt(text_file, cell_nodeid, fmt='%u')
+#        text_file.write("endelements\n")
+#
+#
+#    with open("mesh"+str(0)+".txt", "a") as text_file:
+#        text_file.write("nodes\n")
+#        for i in range(len(nodes)):
+#            for j in range(3):
+#                text_file.write(str(nodes[i][j])+str(" "))
+#            text_file.write(str(ghost_nodes[i]))
+#            text_file.write("\n")
+#        text_file.write("endnodes\n")
 
     stop = timeit.default_timer()
 
