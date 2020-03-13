@@ -12,6 +12,6 @@ except:
 # ...
 
 def test_mesh_1():
-    filename = os.path.join(mesh_dir, "mesh.msh")
+    filename = os.path.join(mesh_dir, "meshpaper2007.msh")
     SIZE = 1
     ddm.meshpart(SIZE, filename)
