@@ -96,7 +96,7 @@ def seqmesh(filename):
     mesh = load_gmsh_mesh(filename)
     
     print(mesh.cell_data)
-    #print(mesh.cells['triangle'], mesh.cells['line'])
+    print(mesh.cells['triangle'], mesh.cells['line'])
 
     #coordinates x, y of each node
     #nodes = create_nodes(mesh)
