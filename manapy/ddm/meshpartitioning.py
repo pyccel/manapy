@@ -31,7 +31,7 @@ def seqmesh(filename):
         else:
             cell_nodeid = [i for i in mesh.cells if i.type=='triangle']
             
-        
+        print("je suis la")
         print(len(cell_nodeid))
 #        for i in range(len(cell_nodeid)):
 #            print(cell_nodeid[i])
