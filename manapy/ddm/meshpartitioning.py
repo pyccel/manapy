@@ -22,7 +22,6 @@ def seqmesh(filename):
     def create_cell_nodeid(mesh):
         cell_nodeid = []
 
-        print(mesh.cells)
         if type(mesh.cells) == dict:
             for i, j in mesh.cells.items():
                 if i == "triangle":
@@ -30,7 +29,7 @@ def seqmesh(filename):
                         cell_nodeid.append(list(j[k]))
                         cell_nodeid[k].sort()
         else:
-            cell_nodeid = [i for i in mesh.cells if i.dtype=='triangle']
+            cell_nodeid = [i for i in mesh.cells if i.type=='triangle']
             
         print(cell_nodeid)
         return cell_nodeid
