@@ -30,18 +30,18 @@ def seqmesh(filename):
                         cell_nodeid[k].sort()
         else:
             cell_nodeid = [i for i in mesh.cells if i.type=='triangle']
-            
+
         print("je suis la", len(cell_nodeid))
         return cell_nodeid
 
     def define_ghost_node(mesh, nodes):
         ghost_nodes = [0]*len(nodes)
 
-        if type(mesh.cells == "dict"):
+        if type(mesh.cells) == dict:
             for i, j in mesh.cell_data.items():
                 if i == "line":
                     ghost = j.get('gmsh:physical')
-    
+
             for i, j in mesh.cells.items():
                 if i == "line":
                     for k in range(len(j)):
@@ -54,6 +54,35 @@ def seqmesh(filename):
                         for index in range(2):
                             if ghost[k] <= 2:
                                 ghost_nodes[j[k][index]] = int(ghost[k])
+
+        elif type(mesh.cells) == list:
+            d = {}
+
+            # ... treating triangles
+            cells = [i for i in mesh.cells if i.type == 'triangle']
+            # TODO improve
+            if not( len(cells) == 1 ):
+                raise ValueError('Expecting a list with one element')
+
+            cells = cells[0]
+            d['triangle'] = cells.data
+            # ...
+
+            # ... treating lines
+            cells = [i for i in mesh.cells if i.type == 'line']
+            # TODO improve
+            if not( len(cells) == 1 ):
+                raise ValueError('Expecting a list with one element')
+
+            cells = cells[0]
+            d['line'] = cells.data
+            # ...
+
+            print(d)
+            import sys; sys.exit(0)
+
+        else:
+            raise TypeError('given {}'.format(type(mesh.cells)))
 
         return ghost_nodes
 

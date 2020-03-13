@@ -13,3 +13,5 @@ except:
 
 def test_mesh_1():
     filename = os.path.join(mesh_dir, "mesh.msh")
+    SIZE = 1
+    ddm.meshpart(SIZE, filename)
