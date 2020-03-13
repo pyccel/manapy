@@ -30,33 +30,39 @@ def seqmesh(filename):
                         cell_nodeid.append(list(j[k]))
                         cell_nodeid[k].sort()
         else:
-            cell_nodeid = [i for i in mesh.cells if i.type=='triangle']
+            cell_nodeid = mesh.cells[1].data
 
-        print("je suis la", mesh.cell_data, mesh.cells)
+        print("je suis la", cell_nodeid)
+        
         return cell_nodeid
 
     def define_ghost_node(mesh, nodes):
         ghost_nodes = [0]*len(nodes)
+        if type(mesh.cells) == dict:
+            for i, j in mesh.cell_data.items():
+                if i == "line":
+                    ghost = j.get('gmsh:physical')
+    
+            for i, j in mesh.cells.items():
+                if i == "line":
+                    for k in range(len(j)):
+                        for index in range(2):
+                            if ghost[k] > 2:
+                                ghost_nodes[j[k][index]] = int(ghost[k])
+            for i, j in mesh.cells.items():
+                if i == "line":
+                    for k in range(len(j)):
+                        for index in range(2):
+                            if ghost[k] <= 2:
+                                ghost_nodes[j[k][index]] = int(ghost[k])
 
-        for i, j in mesh.cell_data.items():
-            if i == "line":
-                ghost = j.get('gmsh:physical')
-
-        for i, j in mesh.cells.items():
-            if i == "line":
-                for k in range(len(j)):
-                    for index in range(2):
-                        if ghost[k] > 2:
-                            ghost_nodes[j[k][index]] = int(ghost[k])
-        for i, j in mesh.cells.items():
-            if i == "line":
-                for k in range(len(j)):
-                    for index in range(2):
-                        if ghost[k] <= 2:
-                            ghost_nodes[j[k][index]] = int(ghost[k])
-        import sys; sys.exit(0)
-#        elif type(mesh.cells) == list:
-#            d = {}
+        elif type(mesh.cells) == list:
+            
+            print(mesh.cell_data, type(mesh.cells))
+            print(mesh.cell_data['gmsh:physical'][0])
+            print(mesh.cells[0].data)
+            print(mesh.cells['line'])
+            #            d = {}
 #
 #            # ... treating triangles
 #            cells = [i for i in mesh.cells if i.type == 'triangle']
@@ -96,18 +102,15 @@ def seqmesh(filename):
     #load mesh
     mesh = load_gmsh_mesh(filename)
     
-    print(type(mesh.cell_data), type(mesh.cells))
-    print(mesh.cell_data['gmsh:physical'][0])
-    print(mesh.cells[0].data)
-    print(mesh.cells['line'])
+
     
 
     #coordinates x, y of each node
-    #nodes = create_nodes(mesh)
+    nodes = create_nodes(mesh)
     #nodes of each cell
-    #cell_nodeid = create_cell_nodeid(mesh)
+    cell_nodeid = create_cell_nodeid(mesh)
 
-    #ghost_nodes = define_ghost_node(mesh, nodes)
+    ghost_nodes = define_ghost_node(mesh, nodes)
 
 #    if os.path.exists("mesh"+str(0)+".txt"):
 #        os.remove("mesh"+str(0)+".txt")
