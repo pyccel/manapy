@@ -97,7 +97,8 @@ def seqmesh(filename):
     mesh = load_gmsh_mesh(filename)
     
     print(type(mesh.cell_data), type(mesh.cells))
-    print(mesh.cell_data['gmsh:physical'])
+    print(mesh.cell_data['gmsh:physical'][0])
+    print(mesh.cells[0].data)
     print(mesh.cells['line'])
     
 
