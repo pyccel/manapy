@@ -31,6 +31,8 @@ def seqmesh(filename):
                         cell_nodeid[k].sort()
         else:
             cell_nodeid = [i for i in mesh.cells if i.dtype=='triangle']
+            
+        print(cell_nodeid)
         return cell_nodeid
 
 #    def define_ghost_node(mesh, nodes):
