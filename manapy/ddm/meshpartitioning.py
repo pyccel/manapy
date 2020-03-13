@@ -16,7 +16,8 @@ def meshpart(size, filename):
 
 def seqmesh(filename):
     def load_gmsh_mesh(filename):
-        mesh = meshio.gmsh.read(filename)
+        #mesh = meshio.gmsh.read(filename)
+        mesh = meshio.read(filename)
         return mesh
 
     def create_cell_nodeid(mesh):
@@ -96,7 +97,7 @@ def seqmesh(filename):
     mesh = load_gmsh_mesh(filename)
     
     print(mesh.cell_data)
-    print(mesh.cells['triangle'], mesh.cells['line'])
+    #print(mesh.cells['triangle'], mesh.cells['line'])
 
     #coordinates x, y of each node
     #nodes = create_nodes(mesh)
