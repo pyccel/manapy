@@ -33,6 +33,7 @@ def seqmesh(filename):
             
         for i in range(len(cell_nodeid)):
             print(cell_nodeid[i])
+            
         return cell_nodeid
 
 #    def define_ghost_node(mesh, nodes):
@@ -93,7 +94,7 @@ def seqmesh(filename):
 #            text_file.write("\n")
 #        text_file.write("endnodes\n")
 #
-#    stop = timeit.default_timer()
+    stop = timeit.default_timer()
 
     print('Global Execution Time: ', stop - start)
 
