@@ -22,33 +22,35 @@ def seqmesh(filename):
     def create_cell_nodeid(mesh):
         cell_nodeid = []
 
-        print(type(mesh.cells))
-        for i, j in mesh.cells.items():
-            if i == "triangle":
-                for k in range(len(j)):
-                    cell_nodeid.append(list(j[k]))
-                    cell_nodeid[k].sort()
+        print(type(mesh.cell_data))
+        if type(mesh.cells == "dict"):
+            for i, j in mesh.cells.items():
+                if i == "triangle":
+                    for k in range(len(j)):
+                        cell_nodeid.append(list(j[k]))
+                        cell_nodeid[k].sort()
         return cell_nodeid
 
     def define_ghost_node(mesh, nodes):
         ghost_nodes = [0]*len(nodes)
 
-        for i, j in mesh.cell_data.items():
-            if i == "line":
-                ghost = j.get('gmsh:physical')
-
-        for i, j in mesh.cells.items():
-            if i == "line":
-                for k in range(len(j)):
-                    for index in range(2):
-                        if ghost[k] > 2:
-                            ghost_nodes[j[k][index]] = int(ghost[k])
-        for i, j in mesh.cells.items():
-            if i == "line":
-                for k in range(len(j)):
-                    for index in range(2):
-                        if ghost[k] <= 2:
-                            ghost_nodes[j[k][index]] = int(ghost[k])
+        if type(mesh.cells == "dict"):
+            for i, j in mesh.cell_data.items():
+                if i == "line":
+                    ghost = j.get('gmsh:physical')
+    
+            for i, j in mesh.cells.items():
+                if i == "line":
+                    for k in range(len(j)):
+                        for index in range(2):
+                            if ghost[k] > 2:
+                                ghost_nodes[j[k][index]] = int(ghost[k])
+            for i, j in mesh.cells.items():
+                if i == "line":
+                    for k in range(len(j)):
+                        for index in range(2):
+                            if ghost[k] <= 2:
+                                ghost_nodes[j[k][index]] = int(ghost[k])
 
         return ghost_nodes
 
