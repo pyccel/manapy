@@ -23,7 +23,7 @@ def seqmesh(filename):
         cell_nodeid = []
 
         print(type(mesh.cell_data))
-        if type(mesh.cells) == "dict":
+        if type(mesh.cells) == dict:
             for i, j in mesh.cells.items():
                 if i == "triangle":
                     for k in range(len(j)):
