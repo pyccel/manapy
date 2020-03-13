@@ -30,6 +30,7 @@ def seqmesh(filename):
                         cell_nodeid.append(list(j[k]))
                         cell_nodeid[k].sort()
         else:
+            print("toto")
             cell_nodeid = [i for i in mesh.cells if i.dtype=='triangle']
             
         print(cell_nodeid)
