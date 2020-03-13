@@ -32,34 +32,30 @@ def seqmesh(filename):
             cell_nodeid = [i for i in mesh.cells if i.type=='triangle']
             
         print("je suis la")
-        print(len(cell_nodeid))
-#        for i in range(len(cell_nodeid)):
-#            print(cell_nodeid[i])
-#            
         return cell_nodeid
 
-#    def define_ghost_node(mesh, nodes):
-#        ghost_nodes = [0]*len(nodes)
-#
-#        if type(mesh.cells == "dict"):
-#            for i, j in mesh.cell_data.items():
-#                if i == "line":
-#                    ghost = j.get('gmsh:physical')
-#    
-#            for i, j in mesh.cells.items():
-#                if i == "line":
-#                    for k in range(len(j)):
-#                        for index in range(2):
-#                            if ghost[k] > 2:
-#                                ghost_nodes[j[k][index]] = int(ghost[k])
-#            for i, j in mesh.cells.items():
-#                if i == "line":
-#                    for k in range(len(j)):
-#                        for index in range(2):
-#                            if ghost[k] <= 2:
-#                                ghost_nodes[j[k][index]] = int(ghost[k])
-#
-#        return ghost_nodes
+    def define_ghost_node(mesh, nodes):
+        ghost_nodes = [0]*len(nodes)
+
+        if type(mesh.cells == "dict"):
+            for i, j in mesh.cell_data.items():
+                if i == "line":
+                    ghost = j.get('gmsh:physical')
+    
+            for i, j in mesh.cells.items():
+                if i == "line":
+                    for k in range(len(j)):
+                        for index in range(2):
+                            if ghost[k] > 2:
+                                ghost_nodes[j[k][index]] = int(ghost[k])
+            for i, j in mesh.cells.items():
+                if i == "line":
+                    for k in range(len(j)):
+                        for index in range(2):
+                            if ghost[k] <= 2:
+                                ghost_nodes[j[k][index]] = int(ghost[k])
+
+        return ghost_nodes
 
     def create_nodes(mesh):
         nodes = []
@@ -76,26 +72,26 @@ def seqmesh(filename):
     #nodes of each cell
     cell_nodeid = create_cell_nodeid(mesh)
 
-#    ghost_nodes = define_ghost_node(mesh, nodes)
-#
-#    if os.path.exists("mesh"+str(0)+".txt"):
-#        os.remove("mesh"+str(0)+".txt")
-#
-#    with open("mesh"+str(0)+".txt", "a") as text_file:
-#        text_file.write("elements\n")
-#        np.savetxt(text_file, cell_nodeid, fmt='%u')
-#        text_file.write("endelements\n")
-#
-#
-#    with open("mesh"+str(0)+".txt", "a") as text_file:
-#        text_file.write("nodes\n")
-#        for i in range(len(nodes)):
-#            for j in range(3):
-#                text_file.write(str(nodes[i][j])+str(" "))
-#            text_file.write(str(ghost_nodes[i]))
-#            text_file.write("\n")
-#        text_file.write("endnodes\n")
-#
+    ghost_nodes = define_ghost_node(mesh, nodes)
+
+    if os.path.exists("mesh"+str(0)+".txt"):
+        os.remove("mesh"+str(0)+".txt")
+
+    with open("mesh"+str(0)+".txt", "a") as text_file:
+        text_file.write("elements\n")
+        np.savetxt(text_file, cell_nodeid, fmt='%u')
+        text_file.write("endelements\n")
+
+
+    with open("mesh"+str(0)+".txt", "a") as text_file:
+        text_file.write("nodes\n")
+        for i in range(len(nodes)):
+            for j in range(3):
+                text_file.write(str(nodes[i][j])+str(" "))
+            text_file.write(str(ghost_nodes[i]))
+            text_file.write("\n")
+        text_file.write("endnodes\n")
+
     stop = timeit.default_timer()
 
     print('Global Execution Time: ', stop - start)
