@@ -1,4 +1,4 @@
-from manapy import meshpart
+from manapy import ddm
 import os
 
 # ... get the mesh directory

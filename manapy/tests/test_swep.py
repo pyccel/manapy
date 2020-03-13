@@ -5,126 +5,153 @@ Created on Thu Feb 20 20:51:37 2020
 
 @author: kissami
 """
-
-from manapy import meshpart
-from mpi4py import MPI
-import numpy as np
 import timeit
 import os
-
-comm = MPI.COMM_WORLD
-size = comm.Get_size()
-rank = comm.Get_rank()
-
-if rank == 0 :
-    #reading gmsh file and partitioning into size subdomains
-    meshpart.MeshPart(size, "rect_005.msh")
-    #removing existing vtk files
-    mypath = "results"
-    if not os.path.exists(mypath):
-        os.mkdir(mypath)
-    for root, dirs, files in os.walk(mypath):
-        for file in files:
-            os.remove(os.path.join(root, file))
-comm.Barrier()
-
-start = timeit.default_timer()
-
-#generating local grid for each subdomain
-g = {}
-g  = meshpart.generate_mesh()
+import numpy as np
+from mpi4py import MPI
+from manapy import ddm
 
 
-faces = g["faces"]
-cells = g["cells"]
-halos = g["halos"]
-nodes = g["nodes"]
+# ... get the mesh directory
+try:
+    MESH_DIR = os.environ['MESH_DIR']
 
-nbelements = len(cells.center)
-nbfaces    = len(faces.name)
-nbnodes    = len(nodes.vertex)
+except:
+    BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+    BASE_DIR = os.path.join(BASE_DIR, '..', '..')
+    MESH_DIR = os.path.join(BASE_DIR, 'mesh')
 
-variables = tuple(['h', 'hu', 'hv'])
-mystruct = np.dtype([('h', np.float64),
-                       ('hu', np.float64),
-                       ('hv', np.float64)])
+COMM = MPI.COMM_WORLD
+SIZE = COMM.Get_size()
+RANK = COMM.Get_rank()
 
-w = np.recarray(nbelements, dtype = mystruct )
-w_ghost = np.recarray(nbfaces, dtype = mystruct)
+def test_swep():
+
+    if RANK == 0:
+        #reading gmsh file and partitioning into size subdomains
+        filename = os.path.join(MESH_DIR, "meshpaper2007.msh")
+        ddm.meshpart(SIZE, filename)
+        #removing existing vtk files
+        mypath = "results"
+        if not os.path.exists(mypath):
+            os.mkdir(mypath)
+        for root, dirs, files in os.walk(mypath):
+            for file in files:
+                os.remove(os.path.join(root, file))
+    COMM.Barrier()
+
+    start = timeit.default_timer()
+
+    #generating local grid for each subdomain
+    grid = {}
+    grid = ddm.generate_mesh()
+
+    faces = grid["faces"]
+    cells = grid["cells"]
+    halos = grid["halos"]
+    nodes = grid["nodes"]
 
 
-#compute the arrays needed for the mpi communication
-if size > 1 :
-    scount, sdepl, rcount, rdepl, taille, indSend, indRecv =  meshpart.prepare_comm(cells,
-                                                              faces, nodes, halos)
-    w_halosend = np.zeros(len(halos.halosInt), dtype = mystruct )
-    w_halo = np.zeros(nbfaces, dtype = mystruct )
-else:
-    scount = sdepl = rcount = rdepl = taille = 0
-    w_halo  = np.zeros(0, dtype = mystruct )
+    nbelements = len(cells.center)
+    nbfaces = len(faces.name)
+    #nbnodes = len(nodes.vertex)
 
-wn = w
-###Initialisation
-w = meshpart.initialisation(w, cells.center)
-#
+    variables = tuple(['h', 'hu', 'hv', 'hc', 'Z'])
+    mystruct = np.dtype([('h', np.float64),
+                         ('hu', np.float64),
+                         ('hv', np.float64),
+                         ('hc', np.float64),
+                         ('Z', np.float64),])
+
+    w_c = np.recarray(nbelements, dtype=mystruct)
+    w_x = np.recarray(nbelements, dtype=mystruct)
+    w_y = np.recarray(nbelements, dtype=mystruct)
+    w_ghost = np.recarray(nbfaces, dtype=mystruct)
 
 
-cfl = 0.5
-####calculation of the time step
-dt = meshpart.time_step(w, cfl, faces.normal, cells.volume, cells.faceid)
-dt_i = np.zeros(1)
-comm.Allreduce(dt, dt_i, MPI.MIN)
-dt = np.float64(dt_i)
-#
-#
-t = 0
-Tfinal = 1
+    #compute the arrays needed for the mpi communication
+    scount, sdepl, rcount, rdepl, taille, indsend = ddm.prepare_comm(cells, halos)
 
-#saving 25 vtk file
-T = int(Tfinal/dt/25)
-m = 0
-n = 0
-#loop over time
-while(t<Tfinal):
+    w_halosend = np.zeros(len(halos.halosint), dtype=mystruct)
+    wx_halosend = np.zeros(len(halos.halosint), dtype=mystruct)
+    wy_halosend = np.zeros(len(halos.halosint), dtype=mystruct)
 
-    t = t + dt
+    w_n = w_c
+    ###Initialisation
+    w_c = ddm.initialisation(w_c, cells.center)
 
+
+    if RANK == 0: print("Start Computation")
+    cfl = 0.5
     ####calculation of the time step
-    dt = meshpart.time_step(w, cfl, faces.normal, cells.volume, cells.faceid)
+    d_t = ddm.time_step(w_c, cfl, faces.normal, cells.volume, cells.faceid)
     dt_i = np.zeros(1)
-    comm.Allreduce(dt, dt_i, MPI.MIN)
-    dt = np.float64(dt_i)
+    COMM.Allreduce(d_t, dt_i, MPI.MIN)
+    d_t = np.float64(dt_i)
+
+    time = 0
+    tfinal = 500
+    #order = 3 #(1 : first order, 2: van albada, 3: barth jeperson)
+
     #saving 25 vtk file
-    T = int(Tfinal/dt/25)
+    tot = int(tfinal/d_t/25)
+    miter = 0
+    niter = 0
+    #loop over time
+    while time < tfinal:
 
-#    dt = 0.0008
-    #update the ghost values for the boundary conditions
-    w_ghost = meshpart.ghost_value(w, w_ghost, faces.cellid, faces.name )
+        time = time + d_t
 
-    #update the halo values
-    if size > 1 :
-        w_halosend = meshpart.define_halosend(w, w_halosend, faces.cellid, indSend, mystruct)
-        w_halorecv = meshpart.all_to_all(w_halosend, taille, mystruct, variables,
-                                                   scount, sdepl, rcount, rdepl)
-        w_halo = meshpart.halo_value(w_halo, faces.cellid, w_halorecv, indRecv, mystruct)
+        #update the ghost values for the boundary conditions
+        w_ghost = ddm.ghost_value(w_c, w_ghost, faces.cellid, faces.name, faces.normal)
 
-    #update the rezidus using explicit scheme
-    rezidus = meshpart.ExplicitScheme(w, w_ghost, w_halo, faces.cellid, faces.normal,
-                                      faces.name, mystruct, variables)
+        #update the halo values
+        #if SIZE > 1:
+        w_halosend = ddm.define_halosend(w_c, w_halosend, indsend)
+        w_halo = ddm.all_to_all(w_halosend, taille, mystruct, variables,
+                                scount, sdepl, rcount, rdepl)
 
+        #compute derivative
+        w_x, w_y = ddm.derivxy(w_c, w_ghost, w_halo, cells.center, halos.centvol,
+                               nodes.cellid, nodes.halonid, cells.nodeid, w_x, w_y)
 
-    #update the new solution
-    wn = meshpart.update(w, wn, dt, rezidus, cells.volume)
+        #update the halo  derivatives values
+        wx_halosend = ddm.define_halosend(w_x, wx_halosend, indsend)
+        wy_halosend = ddm.define_halosend(w_y, wy_halosend, indsend)
 
-    #save vtk files for the solution
-    if(n%T == 0):
-        meshpart.save_paraview_results(w, n, m, t,dt, rank , size, cells.nodeid, nodes.vertex)
-        m += 1
+        wx_halo = ddm.all_to_all(wx_halosend, taille, mystruct, variables,
+                                 scount, sdepl, rcount, rdepl)
+        wy_halo = ddm.all_to_all(wy_halosend, taille, mystruct, variables,
+                                 scount, sdepl, rcount, rdepl)
 
+        #update the rezidus using explicit scheme
+        rezidus = ddm.explicitscheme(w_c, w_x, w_y, w_ghost, w_halo, wx_halo, wy_halo,
+                                     faces.cellid, cells.faceid, cells.center, halos.centvol,
+                                     faces.center, faces.normal, faces.halofid,
+                                     faces.name, mystruct)
 
-    w = wn
-    n += 1
-#
-stop = timeit.default_timer()
+        #update the new solution
+        w_n = ddm.update(w_c, w_n, d_t, rezidus, cells.volume)
 
-if rank == 0 : print(stop - start)
+        #save vtk files for the solution
+        if niter%tot == 0:
+            ddm.save_paraview_results(w_c, niter, miter, time, d_t, RANK, SIZE,
+                                      cells.nodeid, nodes.vertex)
+            miter += 1
+
+        w_c = w_n
+        niter += 1
+
+        ####calculation of the time step
+        d_t = ddm.time_step(w_c, cfl, faces.normal, cells.volume, cells.faceid)
+        dt_i = np.zeros(1)
+        COMM.Allreduce(d_t, dt_i, MPI.MIN)
+        d_t = np.float64(dt_i)
+        #saving 25 vtk file
+        tot = int(tfinal/d_t/25)
+
+    stop = timeit.default_timer()
+
+    if RANK == 0: print(stop - start)
+
+test_swep()
