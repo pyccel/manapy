@@ -22,7 +22,7 @@ def seqmesh(filename):
     def create_cell_nodeid(mesh):
         cell_nodeid = []
 
-        print(mesh.cells)
+        print(type(mesh.cells))
         for i, j in mesh.cells.items():
             if i == "triangle":
                 for k in range(len(j)):
