@@ -96,7 +96,7 @@ def seqmesh(filename):
 
     ghost_nodes = define_ghost_node(mesh, nodes)
     
-    print(ghost_nodes)
+    print(len(ghost_nodes))
     
     
     print(mesh.cells['line'])
