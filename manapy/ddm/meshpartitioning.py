@@ -123,9 +123,7 @@ def paramesh(size, filename):
 
         for i in range(len(cell_nodeid)):
             cell_nodeid[i].sort()
-        
-        print("je suis la", cell_nodeid)
-        
+                
         return cell_nodeid
 
     def define_ghost_node(mesh, nodes):
