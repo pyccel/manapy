@@ -842,13 +842,12 @@ def save_paraview_results(w_c, niter, miter, time, dtime, rank, size, cells, nod
     for i in nodes:
         points.append([i[0], i[1], i[2]])
 
-    data = {"h" : w_c.h, "u" : w_c.hu/w_c.h, "v": w_c.hv/w_c.h, "c": w_c.hc/w_c.h, "Z": w_c.Z}
-    data = {"h": data, "u":data, "v": data, "c": data, "Z":data}
+    data = {"h" : w_c.h}#, "u" : w_c.hu/w_c.h, "v": w_c.hv/w_c.h, "c": w_c.hc/w_c.h, "Z": w_c.Z}
+    #data = {"h": data}#, "u":data, "v": data, "c": data, "Z":data}
     maxh = np.zeros(1)
     maxh = max(w_c.hc)
     integral_sum = np.zeros(1)
 
-    print(data)
     COMM.Reduce(maxh, integral_sum, MPI.MAX, 0)
     if rank == 0:
         print(" **************************** Computing ****************************")
