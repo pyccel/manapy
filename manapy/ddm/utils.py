@@ -856,8 +856,8 @@ def save_paraview_results(w_c, niter, miter, time, dtime, rank, size, cells, nod
         print("Iteration = ", niter, "time = ", np.float16(time), "time step = ", np.float16(dtime))
         print("max h =", np.float16(integral_sum[0]))
 
-#    meshio.write_points_cells("results/visu"+str(rank)+"-"+str(miter)+".vtu",
-#                              points, elements, cell_data=data, file_format="vtu")
+    meshio.write_points_cells("results/visu"+str(rank)+"-"+str(miter)+".vtu",
+                              points, elements, file_format="vtu")#, cell_data=data, file_format="vtu")
 
     if(rank == 0 and size > 1):
         with open("results/visu"+str(miter)+".pvtu", "a") as text_file:
