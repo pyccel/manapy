@@ -63,7 +63,7 @@ def seqmesh(filename):
                                 ghost_nodes[j[k][index]] = int(ghost[k])
                     
         elif type(mesh.cells) == list:
-            print(mesh.cells[0].data)
+            print(len(mesh.cells[0].data))
 
             ghost = mesh.cell_data['gmsh:physical'][0]            
             for i in range(len(mesh.cells[0].data)):
