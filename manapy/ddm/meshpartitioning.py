@@ -74,7 +74,6 @@ def seqmesh(filename):
                     if ghost[i] <= 2:
                         ghost_nodes[mesh.cells[0].data[i][j]] = int(ghost[i])
                 
-            print(mesh.cells['line'])
         return ghost_nodes
 
     def create_nodes(mesh):
