@@ -844,6 +844,7 @@ def save_paraview_results(w_c, niter, miter, time, dtime, rank, size, cells, nod
 
     data = {"h" : w_c.h, "u" : w_c.hu/w_c.h, "v": w_c.hv/w_c.h, "c": w_c.hc/w_c.h, "Z": w_c.Z}
     data = {"h": data, "u":data, "v": data, "c": data, "Z":data}
+    
     maxh = np.zeros(1)
     maxh = max(w_c.hc)
     integral_sum = np.zeros(1)

@@ -38,7 +38,7 @@ packages = find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"])
 # Dependencies
 install_requires = [
     'numpy',
-    'meshio',
+    'meshio<4',
     'mpi4py',
     'mgmetis',
     'numba',
