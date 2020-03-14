@@ -24,20 +24,25 @@ def seqmesh(filename):
         cell_nodeid = []
 
         if type(mesh.cells) == dict:
-            for i, j in mesh.cells.items():
-                if i == "triangle":
-                    for k in range(len(j)):
-                        cell_nodeid.append(list(j[k]))
-                        cell_nodeid[k].sort()
-        else:
+            cell_nodeid = mesh.cells["triangle"]
+#            for i, j in mesh.cells.items():
+#                if i == "triangle":
+#                    for k in range(len(j)):
+#                        cell_nodeid.append(list(j[k]))
+#                        cell_nodeid[k].sort()
+        elif type(mesh.cells) == list:
             cell_nodeid = mesh.cells[1].data
 
+        for i in range(len(cell_nodeid)):
+            cell_nodeid[k].sort()
+        
         print("je suis la", cell_nodeid)
         
         return cell_nodeid
 
     def define_ghost_node(mesh, nodes):
         ghost_nodes = [0]*len(nodes)
+        
         if type(mesh.cells) == dict:
             for i, j in mesh.cell_data.items():
                 if i == "line":
@@ -58,9 +63,21 @@ def seqmesh(filename):
 
         elif type(mesh.cells) == list:
             
-            print(mesh.cell_data, type(mesh.cells))
-            print(mesh.cell_data['gmsh:physical'][0])
-            print(mesh.cells[0].data)
+            ghost = mesh.cell_data['gmsh:physical'][0]
+            
+            for i in range(len(mesh.cells[0].data)):
+                for j in range(2):
+                    if ghost[i] > 2:
+                        ghost_nodes[j[i][j]] = int(ghost[i])
+            
+            for i in range(len(mesh.cells[0].data)):
+                for j in range(2):
+                    if ghost[i] <= 2:
+                        ghost_nodes[j[i][j]] = int(ghost[i])
+                
+#            print(mesh.cell_data, type(mesh.cells))
+#            print(mesh.cell_data['gmsh:physical'][0])
+#            print(mesh.cells[0].data)
             print(mesh.cells['line'])
             #            d = {}
 #
