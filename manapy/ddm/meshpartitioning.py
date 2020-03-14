@@ -63,8 +63,6 @@ def seqmesh(filename):
                                 ghost_nodes[j[k][index]] = int(ghost[k])
                     
         elif type(mesh.cells) == list:
-            print(len(mesh.cells[0].data))
-
             ghost = mesh.cell_data['gmsh:physical'][0]            
             for i in range(len(mesh.cells[0].data)):
                 for j in range(2):
@@ -76,38 +74,7 @@ def seqmesh(filename):
                     if ghost[i] <= 2:
                         ghost_nodes[mesh.cells[0].data[i][j]] = int(ghost[i])
                 
-#            print(mesh.cell_data, type(mesh.cells))
-#            print(mesh.cell_data['gmsh:physical'][0])
-#            print(mesh.cells[0].data)
             print(mesh.cells['line'])
-            #            d = {}
-#
-#            # ... treating triangles
-#            cells = [i for i in mesh.cells if i.type == 'triangle']
-#            # TODO improve
-#            if not( len(cells) == 1 ):
-#                raise ValueError('Expecting a list with one element')
-#
-#            cells = cells[0]
-#            d['triangle'] = cells.data
-#            # ...
-#
-#            # ... treating lines
-#            cells = [i for i in mesh.cells if i.type == 'line']
-#            # TODO improve
-#            if not( len(cells) == 1 ):
-#                raise ValueError('Expecting a list with one element')
-#
-#            cells = cells[0]
-#            d['line'] = cells.data
-#            # ...
-#
-#            print(d)
-#            import sys; sys.exit(0)
-#
-#        else:
-#            raise TypeError('given {}'.format(type(mesh.cells)))
-
         return ghost_nodes
 
     def create_nodes(mesh):
@@ -129,24 +96,26 @@ def seqmesh(filename):
     cell_nodeid = create_cell_nodeid(mesh)
 
     ghost_nodes = define_ghost_node(mesh, nodes)
+    
+    print(ghost_nodes)
 
-#    if os.path.exists("mesh"+str(0)+".txt"):
-#        os.remove("mesh"+str(0)+".txt")
-#
-#    with open("mesh"+str(0)+".txt", "a") as text_file:
-#        text_file.write("elements\n")
-#        np.savetxt(text_file, cell_nodeid, fmt='%u')
-#        text_file.write("endelements\n")
-#
-#
-#    with open("mesh"+str(0)+".txt", "a") as text_file:
-#        text_file.write("nodes\n")
-#        for i in range(len(nodes)):
-#            for j in range(3):
-#                text_file.write(str(nodes[i][j])+str(" "))
-#            text_file.write(str(ghost_nodes[i]))
-#            text_file.write("\n")
-#        text_file.write("endnodes\n")
+    if os.path.exists("mesh"+str(0)+".txt"):
+        os.remove("mesh"+str(0)+".txt")
+
+    with open("mesh"+str(0)+".txt", "a") as text_file:
+        text_file.write("elements\n")
+        np.savetxt(text_file, cell_nodeid, fmt='%u')
+        text_file.write("endelements\n")
+
+
+    with open("mesh"+str(0)+".txt", "a") as text_file:
+        text_file.write("nodes\n")
+        for i in range(len(nodes)):
+            for j in range(3):
+                text_file.write(str(nodes[i][j])+str(" "))
+            text_file.write(str(ghost_nodes[i]))
+            text_file.write("\n")
+        text_file.write("endnodes\n")
 
     stop = timeit.default_timer()
 
