@@ -34,7 +34,7 @@ def seqmesh(filename):
             cell_nodeid = mesh.cells[1].data
 
         for i in range(len(cell_nodeid)):
-            cell_nodeid[k].sort()
+            cell_nodeid[i].sort()
         
         print("je suis la", cell_nodeid)
         
