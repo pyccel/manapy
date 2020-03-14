@@ -15,7 +15,7 @@ def meshpart(size, filename):
         seqmesh(filename)
 
 def seqmesh(filename):
-    
+
     def load_gmsh_mesh(filename):
         #mesh = meshio.gmsh.read(filename)
         mesh = meshio.read(filename)
@@ -31,12 +31,12 @@ def seqmesh(filename):
 
         for i in range(len(cell_nodeid)):
             cell_nodeid[i].sort()
-                
+
         return cell_nodeid
 
     def define_ghost_node(mesh, nodes):
         ghost_nodes = [0]*len(nodes)
-        
+
         if type(mesh.cells) == dict:
             for i, j in mesh.cell_data.items():
                 if i == "line":
@@ -54,19 +54,19 @@ def seqmesh(filename):
                         for index in range(2):
                             if ghost[k] <= 2:
                                 ghost_nodes[j[k][index]] = int(ghost[k])
-                    
+
         elif type(mesh.cells) == list:
-            ghost = mesh.cell_data['gmsh:physical'][0]            
+            ghost = mesh.cell_data['gmsh:physical'][0]
             for i in range(len(mesh.cells[0].data)):
                 for j in range(2):
                     if ghost[i] > 2:
                         ghost_nodes[mesh.cells[0].data[i][j]] = int(ghost[i])
-            
+
             for i in range(len(mesh.cells[0].data)):
                 for j in range(2):
                     if ghost[i] <= 2:
                         ghost_nodes[mesh.cells[0].data[i][j]] = int(ghost[i])
-                
+
         return ghost_nodes
 
     def create_nodes(mesh):
@@ -84,7 +84,7 @@ def seqmesh(filename):
     cell_nodeid = create_cell_nodeid(mesh)
 
     ghost_nodes = define_ghost_node(mesh, nodes)
-     
+
     if os.path.exists("mesh"+str(0)+".txt"):
         os.remove("mesh"+str(0)+".txt")
 
@@ -123,12 +123,12 @@ def paramesh(size, filename):
 
         for i in range(len(cell_nodeid)):
             cell_nodeid[i].sort()
-                
+
         return cell_nodeid
 
     def define_ghost_node(mesh, nodes):
         ghost_nodes = [0]*len(nodes)
-        
+
         if type(mesh.cells) == dict:
             for i, j in mesh.cell_data.items():
                 if i == "line":
@@ -146,19 +146,19 @@ def paramesh(size, filename):
                         for index in range(2):
                             if ghost[k] <= 2:
                                 ghost_nodes[j[k][index]] = int(ghost[k])
-                    
+
         elif type(mesh.cells) == list:
-            ghost = mesh.cell_data['gmsh:physical'][0]            
+            ghost = mesh.cell_data['gmsh:physical'][0]
             for i in range(len(mesh.cells[0].data)):
                 for j in range(2):
                     if ghost[i] > 2:
                         ghost_nodes[mesh.cells[0].data[i][j]] = int(ghost[i])
-            
+
             for i in range(len(mesh.cells[0].data)):
                 for j in range(2):
                     if ghost[i] <= 2:
                         ghost_nodes[mesh.cells[0].data[i][j]] = int(ghost[i])
-                
+
         return ghost_nodes
 
     start = timeit.default_timer()

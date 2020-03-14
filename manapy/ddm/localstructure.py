@@ -392,7 +392,7 @@ def prepare_comm(cells, halos):
 
         for i in range(SIZE):
             taille += rcount[i]
-    
+
         taille = int(taille)
 
         indsend = np.zeros(0, dtype=int)
