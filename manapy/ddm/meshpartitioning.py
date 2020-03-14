@@ -48,6 +48,7 @@ def seqmesh(filename):
                 if i == "line":
                     ghost = j.get('gmsh:physical')
     
+            print(mesh.cells)
             for i, j in mesh.cells.items():
                 if i == "line":
                     for k in range(len(j)):
@@ -63,17 +64,16 @@ def seqmesh(filename):
 
         elif type(mesh.cells) == list:
             
-            ghost = mesh.cell_data['gmsh:physical'][0]
-            
+            ghost = mesh.cell_data['gmsh:physical'][0]            
             for i in range(len(mesh.cells[0].data)):
                 for j in range(2):
                     if ghost[i] > 2:
-                        ghost_nodes[j[i][j]] = int(ghost[i])
+                        ghost_nodes[mesh.cells[0].data[j]] = int(ghost[i])
             
             for i in range(len(mesh.cells[0].data)):
                 for j in range(2):
                     if ghost[i] <= 2:
-                        ghost_nodes[j[i][j]] = int(ghost[i])
+                        ghost_nodes[mesh.cells[0].data[j]] = int(ghost[i])
                 
 #            print(mesh.cell_data, type(mesh.cells))
 #            print(mesh.cell_data['gmsh:physical'][0])
