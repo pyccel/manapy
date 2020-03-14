@@ -856,36 +856,36 @@ def save_paraview_results(w_c, niter, miter, time, dtime, rank, size, cells, nod
         print("Iteration = ", niter, "time = ", np.float16(time), "time step = ", np.float16(dtime))
         print("max h =", np.float16(integral_sum[0]))
 
-    meshio.write_points_cells("results/visu"+str(rank)+"-"+str(miter)+".vtu",
-                              points, elements, cell_data=data, file_format="vtu")
+#    meshio.write_points_cells("results/visu"+str(rank)+"-"+str(miter)+".vtu",
+#                              points, elements, cell_data=data, file_format="vtu")
 
-#    if(rank == 0 and size > 1):
-#        with open("results/visu"+str(miter)+".pvtu", "a") as text_file:
-#            text_file.write("<?xml version=\"1.0\"?>\n")
-#            text_file.write("<VTKFile type=\"PUnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">\n")
-#            text_file.write("<PUnstructuredGrid GhostLevel=\"0\">\n")
-#            text_file.write("<PPoints>\n")
-#            text_file.write("<PDataArray type=\"Float64\" Name=\"Points\" NumberOfComponents=\"3\" format=\"binary\"/>\n")
-#            text_file.write("</PPoints>\n")
-#            text_file.write("<PCells>\n")
-#            text_file.write("<PDataArray type=\"Int64\" Name=\"connectivity\" format=\"binary\"/>\n")
-#            text_file.write("<PDataArray type=\"Int64\" Name=\"offsets\" format=\"binary\"/>\n")
-#            text_file.write("<PDataArray type=\"Int64\" Name=\"types\" format=\"binary\"/>\n")
-#            text_file.write("</PCells>\n")
-#            text_file.write("<PCellData Scalars=\"h\">\n")
-#            text_file.write("<PDataArray type=\"Float64\" Name=\"h\" format=\"binary\"/>\n")
-#            text_file.write("<PDataArray type=\"Float64\" Name=\"u\" format=\"binary\"/>\n")
-#            text_file.write("<PDataArray type=\"Float64\" Name=\"v\" format=\"binary\"/>\n")
-#            text_file.write("<PDataArray type=\"Float64\" Name=\"c\" format=\"binary\"/>\n")
-#            text_file.write("<PDataArray type=\"Float64\" Name=\"Z\" format=\"binary\"/>\n")
-#            text_file.write("</PCellData>\n")
-#            for i in range(size):
-#                name1 = "visu"
-#                bu1 = [10]
-#                bu1 = str(i)
-#                name1 += bu1
-#                name1 += "-"+str(miter)
-#                name1 += ".vtu"
-#                text_file.write("<Piece Source=\""+str(name1)+"\"/>\n")
-#            text_file.write("</PUnstructuredGrid>\n")
-#            text_file.write("</VTKFile>")
+    if(rank == 0 and size > 1):
+        with open("results/visu"+str(miter)+".pvtu", "a") as text_file:
+            text_file.write("<?xml version=\"1.0\"?>\n")
+            text_file.write("<VTKFile type=\"PUnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">\n")
+            text_file.write("<PUnstructuredGrid GhostLevel=\"0\">\n")
+            text_file.write("<PPoints>\n")
+            text_file.write("<PDataArray type=\"Float64\" Name=\"Points\" NumberOfComponents=\"3\" format=\"binary\"/>\n")
+            text_file.write("</PPoints>\n")
+            text_file.write("<PCells>\n")
+            text_file.write("<PDataArray type=\"Int64\" Name=\"connectivity\" format=\"binary\"/>\n")
+            text_file.write("<PDataArray type=\"Int64\" Name=\"offsets\" format=\"binary\"/>\n")
+            text_file.write("<PDataArray type=\"Int64\" Name=\"types\" format=\"binary\"/>\n")
+            text_file.write("</PCells>\n")
+            text_file.write("<PCellData Scalars=\"h\">\n")
+            text_file.write("<PDataArray type=\"Float64\" Name=\"h\" format=\"binary\"/>\n")
+            text_file.write("<PDataArray type=\"Float64\" Name=\"u\" format=\"binary\"/>\n")
+            text_file.write("<PDataArray type=\"Float64\" Name=\"v\" format=\"binary\"/>\n")
+            text_file.write("<PDataArray type=\"Float64\" Name=\"c\" format=\"binary\"/>\n")
+            text_file.write("<PDataArray type=\"Float64\" Name=\"Z\" format=\"binary\"/>\n")
+            text_file.write("</PCellData>\n")
+            for i in range(size):
+                name1 = "visu"
+                bu1 = [10]
+                bu1 = str(i)
+                name1 += bu1
+                name1 += "-"+str(miter)
+                name1 += ".vtu"
+                text_file.write("<Piece Source=\""+str(name1)+"\"/>\n")
+            text_file.write("</PUnstructuredGrid>\n")
+            text_file.write("</VTKFile>")
