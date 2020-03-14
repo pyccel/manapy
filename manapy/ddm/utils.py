@@ -848,7 +848,7 @@ def save_paraview_results(w_c, niter, miter, time, dtime, rank, size, cells, nod
     maxh = max(w_c.hc)
     integral_sum = np.zeros(1)
 
-    print(type(data))
+    print(data)
     COMM.Reduce(maxh, integral_sum, MPI.MAX, 0)
     if rank == 0:
         print(" **************************** Computing ****************************")
