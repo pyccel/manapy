@@ -848,17 +848,17 @@ def save_paraview_results(w_c, niter, miter, time, dtime, rank, size, cells, nod
     maxh = max(w_c.hc)
     integral_sum = np.zeros(1)
 
-
+    print(type(data))
     COMM.Reduce(maxh, integral_sum, MPI.MAX, 0)
     if rank == 0:
         print(" **************************** Computing ****************************")
         print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$ Saving Results $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
         print("Iteration = ", niter, "time = ", np.float16(time), "time step = ", np.float16(dtime))
         print("max h =", np.float16(integral_sum[0]))
-#
-#    meshio.write_points_cells("results/visu"+str(rank)+"-"+str(miter)+".vtu",
-#                              points, elements, cell_data=data, file_format="vtu")
-#
+
+    meshio.write_points_cells("results/visu"+str(rank)+"-"+str(miter)+".vtu",
+                              points, elements, cell_data=data, file_format="vtu")
+
 #    if(rank == 0 and size > 1):
 #        with open("results/visu"+str(miter)+".pvtu", "a") as text_file:
 #            text_file.write("<?xml version=\"1.0\"?>\n")
