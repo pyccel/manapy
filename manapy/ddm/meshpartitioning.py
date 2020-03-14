@@ -97,6 +97,10 @@ def seqmesh(filename):
     ghost_nodes = define_ghost_node(mesh, nodes)
     
     print(ghost_nodes)
+    
+    
+    print(mesh.cells['line'])
+
 
     if os.path.exists("mesh"+str(0)+".txt"):
         os.remove("mesh"+str(0)+".txt")
