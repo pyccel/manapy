@@ -29,7 +29,7 @@ def test_swep():
 
     if RANK == 0:
         #reading gmsh file and partitioning into size subdomains
-        filename = os.path.join(MESH_DIR, "meshpaper2007.msh")
+        filename = os.path.join(MESH_DIR, "coarse_mesh.msh")
         ddm.meshpart(SIZE, filename)
         #removing existing vtk files
         mypath = "results"
