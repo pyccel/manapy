@@ -91,7 +91,7 @@ def test_swep_ordre2():
     d_t = np.float64(dt_i)
     
     time = 0
-    tfinal = 5000
+    tfinal = 50
     #(1 : first order, 2: barth jeperson)
 
     #saving 25 vtk file
