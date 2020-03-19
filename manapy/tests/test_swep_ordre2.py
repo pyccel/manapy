@@ -150,8 +150,8 @@ def test_swep_ordre2():
         w_c = w_n
         niter += 1
         
-        for i in range(len(w_c)):
-            print(i, w_c.h[i], rezidus["h"][i])
+#        for i in range(len(w_c)):
+#            print(i, w_c.h[i], rezidus["h"][i])
 
         ####calculation of the time step
         d_t = ddm.time_step(w_c, cfl, faces.normal, cells.volume, cells.faceid)
