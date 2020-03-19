@@ -42,6 +42,7 @@ install_requires = [
     'mpi4py',
     'mgmetis',
     'numba',
+    'scipy',
     #'timeit',
     ]
 
