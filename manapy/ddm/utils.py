@@ -681,7 +681,7 @@ def explicitscheme(w_c, w_x, w_y, w_ghost, w_halo, wx_halo, wy_halo, cellid, fac
                 w_rn.hc = w_r.hc + psi_right * (w_x_right.hc * r_r[0] + w_y_right.hc * r_r[1])
                 w_rn.Z = w_r.Z  + psi_right * (w_x_right.Z  * r_r[0] + w_y_right.Z  * r_r[1])
                 
-#                print(cellid[i][0], cellid[i][1], w_ln.h, w_l.h, w_rn.h, w_r.h)
+                print(cellid[i][0], cellid[i][1], w_ln.h, w_rn.h)
 #                print("toto")
                 flx = compute_flux_shallow_srnh(flx, fleft, fright, w_ln, w_rn, norm)
 
