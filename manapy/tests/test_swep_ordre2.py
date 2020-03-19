@@ -137,6 +137,7 @@ def test_swep_ordre2():
 
         #update the new solution
         w_n = ddm.update(w_c, w_n, d_t, rezidus, cells.volume)
+               
 
         #save vtk files for the solution
         if niter%tot == 0:
@@ -146,6 +147,9 @@ def test_swep_ordre2():
 
         w_c = w_n
         niter += 1
+        
+        for i in range(len(w_c)):
+            if w_c.h[i]  != 1 : print(i, w_c.h[i])
 
         ####calculation of the time step
         d_t = ddm.time_step(w_c, cfl, faces.normal, cells.volume, cells.faceid)
