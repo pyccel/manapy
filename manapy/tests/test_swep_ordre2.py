@@ -149,7 +149,7 @@ def test_swep_ordre2():
         niter += 1
         
         for i in range(len(w_c)):
-            if w_c.h[i]  != 1 : print(i, w_c.h[i])
+            print(i, w_c.h[i], rezidus["h"][i])
 
         ####calculation of the time step
         d_t = ddm.time_step(w_c, cfl, faces.normal, cells.volume, cells.faceid)
