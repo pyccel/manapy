@@ -609,7 +609,7 @@ def albada(wleft, wright, w_x, w_y, center_left, center_right, lim):
 def explicitscheme(w_c, w_x, w_y, w_ghost, w_halo, wx_halo, wy_halo, cellid, faceid,
                    centerc, centerh, centerf, normal, halofid, name, mystruct):
 
-    order = 2
+    order = 1
 
     rezidus = np.zeros(len(w_c), dtype=mystruct)
     w_l = np.zeros(1, dtype=mystruct)[0]
