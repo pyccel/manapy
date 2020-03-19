@@ -66,6 +66,7 @@ def test_swep():
     w_c = np.recarray(nbelements, dtype=mystruct)
     w_x = np.recarray(nbelements, dtype=mystruct)
     w_y = np.recarray(nbelements, dtype=mystruct)
+    source = np.recarray(nbelements, dtype=mystruct)
     w_ghost = np.recarray(nbfaces, dtype=mystruct)
 
 
@@ -129,15 +130,12 @@ def test_swep():
                                      faces.cellid, cells.faceid, cells.center, halos.centvol,
                                      faces.center, faces.normal, faces.halofid,
                                      faces.name, mystruct)
-        source = ddm.term_source(w_c, w_ghost, cells.nodeid, cells.faceid, cells.center, faces.cellid,
-                                 faces.nodeid, faces.normal, faces.center, nodes.vertex, mystruct)
+        #source = ddm.term_source(w_c, w_ghost, cells.nodeid, cells.faceid, cells.center, faces.cellid,
+        #                         faces.nodeid, faces.normal, faces.center, nodes.vertex, mystruct)
 
 
         #update the new solution
-        w_n = ddm.update(w_c, w_n, d_t, rezidus, source, cells.volume)
-        
-        #for i in range(len(w_c)):
-        #    w_c[i].hu = (cells.center[i][0] - 14000)/5400 * np.cos(np.pi*(4*time/86400 + 1/2))
+        w_n = ddm.update(w_c, w_n, d_t, rezidus, cells.volume)
 
         #save vtk files for the solution
         if niter%tot == 0:

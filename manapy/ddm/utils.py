@@ -818,13 +818,13 @@ def term_source(w_c, w_ghost, nodeidc, faceidc, centerc, cellidf, nodeidf, norma
     return source
 
 @njit(fastmath=True)
-def update(w_c, wnew, dtime, rezidus, source, volume):
+def update(w_c, wnew, dtime, rezidus, volume):
     for i in range(len(w_c)):
-        wnew.h[i] = w_c.h[i]  + dtime  * ((rezidus["h"][i] + source["h"][i])/volume[i])
-        wnew.hu[i] = w_c.hu[i] + dtime * ((rezidus["hu"][i]+ source["hu"][i])/volume[i])
-        wnew.hv[i] = w_c.hv[i] + dtime * ((rezidus["hv"][i]+ source["hv"][i])/volume[i])
-        wnew.hc[i] = w_c.hc[i] + dtime * ((rezidus["hc"][i]+ source["hc"][i])/volume[i])
-        wnew.Z[i] = w_c.Z[i]  + dtime  * ((rezidus["Z"][i]+  source["Z"][i])/volume[i])
+        wnew.h[i] = w_c.h[i]  + dtime  * (rezidus["h"][i]/volume[i])
+        wnew.hu[i] = w_c.hu[i] + dtime * (rezidus["hu"][i]/volume[i])
+        wnew.hv[i] = w_c.hv[i] + dtime * (rezidus["hv"][i]/volume[i])
+        wnew.hc[i] = w_c.hc[i] + dtime * (rezidus["hc"][i]/volume[i])
+        wnew.Z[i] = w_c.Z[i]  + dtime  * (rezidus["Z"][i]/volume[i])
 
     return wnew
 
