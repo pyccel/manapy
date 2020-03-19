@@ -98,6 +98,7 @@ def test_swep():
     tot = int(tfinal/d_t/25)
     miter = 0
     niter = 0
+    order = 1
     #loop over time
     while time < tfinal:
 
@@ -129,7 +130,7 @@ def test_swep():
         rezidus = ddm.explicitscheme(w_c, w_x, w_y, w_ghost, w_halo, wx_halo, wy_halo,
                                      faces.cellid, cells.faceid, cells.center, halos.centvol,
                                      faces.center, faces.normal, faces.halofid,
-                                     faces.name, mystruct)
+                                     faces.name, mystruct, order)
         #source = ddm.term_source(w_c, w_ghost, cells.nodeid, cells.faceid, cells.center, faces.cellid,
         #                         faces.nodeid, faces.normal, faces.center, nodes.vertex, mystruct)
 
