@@ -134,8 +134,8 @@ def test_swep_ordre2():
         #source = ddm.term_source(w_c, w_ghost, cells.nodeid, cells.faceid, cells.center, faces.cellid,
         #                         faces.nodeid, faces.normal, faces.center, nodes.vertex, mystruct)
         
-#        for i in range(len(w_c)):
-#            print("av ", i, w_c.h[i], rezidus[i])
+        for i in range(len(w_c)):
+            print("av ", i, w_c.h[i], rezidus[i])
 
         #update the new solution
         w_n = ddm.update(w_c, w_n, d_t, rezidus, cells.volume)
