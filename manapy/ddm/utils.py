@@ -393,7 +393,7 @@ def compute_flux_shallow_rusanov(flux, fleft, fright, w_l, w_r, normal):
     flux.hu = 0.5 * (fleft.hu + fright.hu) - 0.5 * s_lr * mes * (w_r.hu - w_l.hu)
     flux.hv = 0.5 * (fleft.hv + fright.hv) - 0.5 * s_lr * mes * (w_r.hv - w_l.hv)
     flux.hc = 0.5 * (fleft.hc + fright.hc) - 0.5 * s_lr * mes * (w_r.hc - w_l.hc)
-    flux.Z = 0
+    flux.Z = 0.
 
     return flux
 #
@@ -403,6 +403,7 @@ def add(sol_1, sol_2):
     sol_1.hu += sol_2.hu
     sol_1.hv += sol_2.hv
     sol_1.hc += sol_2.hc
+    sol_1.Z += sol_2.Z
 
     return sol_1
 
@@ -412,6 +413,7 @@ def minus(sol_1, sol_2):
     sol_1.hu -= sol_2.hu
     sol_1.hv -= sol_2.hv
     sol_1.hc -= sol_2.hc
+    sol_1.Z -= sol_2.Z
 
     return sol_1
 
@@ -729,13 +731,102 @@ def explicitscheme(w_c, w_x, w_y, w_ghost, w_halo, wx_halo, wy_halo, cellid, fac
     return rezidus
 
 @njit(fastmath=True)
-def update(w_c, wnew, dtime, rezidus, volume):
+def term_source(w_c, w_ghost, nodeidc, faceidc, centerc, cellidf, nodeidf, normalf,
+                centerf, vertex, mystruct):
+
+    source = np.zeros(len(w_c), dtype=mystruct)
+    trv = np.zeros(1, dtype=mystruct)[0]
+
+    zv = np.zeros(3)
+    ss = np.zeros((3, 2))
+    ns = np.zeros((3, 2))
+    mata = np.zeros(3)
+    matb = np.zeros(3)
+    v_1 = np.zeros(3, dtype=np.int8)
+    v_2 = np.zeros(3, dtype=np.int8)
+
+    grav = 9.81
+
+    for i in range(len(Q)):
+        G = centerc[i]
+        c_1 = 0
+        c_2 = 0
+
+        for j in range(3):
+            f = faceidc[i][j]
+            c = centerf[f]
+
+            if cellidf[f][1] != -1:
+                if i == cellidf[f][0]:
+                    trv = w_c[cellidf[f][1]]
+                else:
+                    trv = w_c[cellidf[f][0]]
+            else:
+                trv = w_ghost[f]
+
+            if np.dot(G-c, normalf[f]) < 0.0:
+                ss[j] = normalf[f]
+            else:
+                ss[j] = -1.0*normalf[f]
+
+            zv[j] = trv.Z
+            mata[j] = trv.h*ss[j][0]
+            matb[j] = trv.h*ss[j][1]
+            c_1 = c_1 + pow(0.5*(w_c[i].h+trv.h),2)*ss[j][0]
+            c_2 = c_2 + pow(0.5*(w_c[i].h+trv.h),2)*ss[j][1]
+
+            v_1[j] = nodeidf[f][0]
+            v_2[j] = nodeidf[f][1]
+
+
+        c_3 = 3.0 * w_c[i].h;
+
+        delta  = (mata[1]*matb[2]-mata[2]*matb[1]) - (mata[0]*matb[2]-matb[0]*mata[2]) + (mata[0]*matb[1]-matb[0]*mata[1])
+
+        deltax = c_3*(mata[1]*matb[2]-mata[2]*matb[1]) - (c_1*matb[2]-c_2*mata[2]) + (c_1*matb[1]-c_2*mata[1])
+
+        deltay = (c_1*matb[2]-c_2*mata[2]) - c_3*(mata[0]*matb[2]-matb[0]*mata[2]) + (mata[0]*c_2-matb[0]*c_1)
+
+        deltaz = (mata[1]*c_2-matb[1]*c_1) - (mata[0]*c_2-matb[0]*c_1) + c_3*(mata[0]*matb[1]-matb[0]*mata[1])
+
+        h_1 = deltax/delta
+        h_2 = deltay/delta
+        h_3 = deltaz/delta
+
+        z_1 = w_c[i].Z + w_c[i].h - h_1
+        z_2 = w_c[i].Z + w_c[i].h - h_2
+        z_3 = w_c[i].Z + w_c[i].h - h_3
+           
+        a = np.array([vertex[nodeidc[i][0]][0], vertex[nodeidc[i][0]][1]])
+        b = np.array([vertex[nodeidc[i][1]][0], vertex[nodeidc[i][1]][1]])
+        c = np.array([vertex[nodeidc[i][2]][0], vertex[nodeidc[i][2]][1]])
+        
+        ns[0] = np.array([-(G[1]-a[1]),(G[0]-a[0])])
+        ns[1] = np.array([-(G[1]-b[1]),(G[0]-b[0])])#ns[0] - ss[1]  #  N23
+        ns[2] = np.array([-(G[1]-c[1]),(G[0]-c[0])])#ns[0] + ss[0]  #  N31
+        
+        print(ns[1], ns[0] - ss[1], ns[0] + ss[0])
+    
+        s_1 = h_1*((z_1+zv[0])*(ss[0]/2.0) + (z_1+z_2)*(ns[0]/2.0) + (z_1+z_3)*((-1)*ns[2]/2.0));
+        s_2 = h_2*((z_2+zv[1])*(ss[1]/2.0) + (z_2+z_1)*((-1)*ns[0]/2.0) + (z_2+z_3)*(ns[1]/2.0));
+        s_3 = h_3*((z_3+zv[2])*(ss[2]/2.0) + (z_3+z_1)*(ns[2]/2.0) + (z_3+z_2)*((-1)*ns[1]/2.0));
+
+        source[i].h = 0
+        source[i].hu = -grav*(s_1[0] + s_2[0] + s_3[0])
+        source[i].hv = -grav*(s_1[1] + s_2[1] + s_3[1])
+        source[i].hc = 0.
+        source[i].Z = 0.
+
+    return source
+
+@njit(fastmath=True)
+def update(w_c, wnew, dtime, rezidus, source, volume):
     for i in range(len(w_c)):
-        wnew.h[i] = w_c.h[i]  + dtime * (rezidus["h"][i]/volume[i])
-        wnew.hu[i] = w_c.hu[i] + dtime * (rezidus["hu"][i]/volume[i])
-        wnew.hv[i] = w_c.hv[i] + dtime * (rezidus["hv"][i]/volume[i])
-        wnew.hc[i] = w_c.hc[i] + dtime * (rezidus["hc"][i]/volume[i])
-        wnew.Z[i] = w_c.Z[i]  + dtime * (rezidus["Z"][i]/volume[i])
+        wnew.h[i] = w_c.h[i]  + dtime  * ((rezidus["h"][i] + source["h"][i])/volume[i])
+        wnew.hu[i] = w_c.hu[i] + dtime * ((rezidus["hu"][i]+ source["hu"][i])/volume[i])
+        wnew.hv[i] = w_c.hv[i] + dtime * ((rezidus["hv"][i]+ source["hv"][i])/volume[i])
+        wnew.hc[i] = w_c.hc[i] + dtime * ((rezidus["hc"][i]+ source["hc"][i])/volume[i])
+        wnew.Z[i] = w_c.Z[i]  + dtime  * ((rezidus["Z"][i]+  source["Z"][i])/volume[i])
 
     return wnew
 
@@ -773,7 +864,7 @@ def initialisation(w_c, center):
     x_2 = 2400
     y_2 = 2400
 
-    choix = 1 # (0,creneau 1:gaussienne)
+    choix = 2 # (0,creneau 1:gaussienne)
     if choix == 0:
         for i in range(nbelements):
             xcent = center[i][0]
@@ -785,8 +876,8 @@ def initialisation(w_c, center):
 
             w_c.hu[i] = 0.
             w_c.hv[i] = 0.
-            w_c.hc[i] = 1.
-            w_c.Z[i] = 0.
+            w_c.hc[i] = 0.
+            w_c.Z[i] = 1.
 
     elif choix == 1:
         for i in range(nbelements):
@@ -802,36 +893,52 @@ def initialisation(w_c, center):
             w_c.hv[i] = 0.5
             w_c.Z[i] = 0.
 
+    elif choix == 2:
+        L = 14000
+        for i in range(nbelements):
+            xcent = center[i][0]
+            ycent = center[i][1]        
+            
+            #w_c.Z[i] = 0.8 * np.exp(-5*(xcent - 1)**2 - 50* (ycent - 0.5)**2) #
+            w_c.Z[i] = 10 + (40*xcent/L) + 10*np.sin(np.pi*(4*xcent/L - 0.5))
+            #w_c.h[i] = 1 - w_c.Z[i]
+            w_c.h[i] = 60.5 - w_c.Z[i]
+
+            w_c.hu[i] = 0.
+            w_c.hv[i] = 0.
+            w_c.hc[i] = 0.
+            
     return w_c
 
 @njit
 def ghost_value(w_c, w_ghost, cellid, name, normal):
 
     for i in range(len(cellid)):
-#        if (name[i] == 3 or name[i] == 4 ):
-#            #slip conditions
-#            norm = normal[i]
-#            #print(name[i], i)
-#
-#            u_i = w_c[cellid[i][0]].hu/w_c[cellid[i][0]].h
-#            v_i = w_c[cellid[i][0]].hv/w_c[cellid[i][0]].h
-#
-#            mesn = np.sqrt(norm[0]*norm[0]+ norm[1]*norm[1])
-#
-#            s_n = norm / mesn
-#
-#            u_g = u_i*(s_n[1]*s_n[1] - s_n[0]*s_n[0]) - 2.0*v_i*s_n[0]*s_n[1]
-#            v_g = v_i*(s_n[0]*s_n[0] - s_n[1]*s_n[1]) - 2.0*u_i*s_n[0]*s_n[1]
-#
-#            w_ghost[i].h = w_c[cellid[i][0]].h
-#            w_ghost[i].Z = w_c[cellid[i][0]].Z
-#            w_ghost[i].hc = w_c[cellid[i][0]].hc
-#
-#            w_ghost[i].hu = w_c[cellid[i][0]].h * u_g
-#            w_ghost[i].hv = w_c[cellid[i][0]].h * v_g
-#
-#        elif name[i] != 0:
-        w_ghost[i] = w_c[cellid[i][0]]
+        #if (name[i] == 3 or name[i] == 4 ):
+        if name[i] != 0:
+            #slip conditions
+            norm = normal[i]
+            #print(name[i], i)
+
+            u_i = w_c[cellid[i][0]].hu/w_c[cellid[i][0]].h
+            v_i = w_c[cellid[i][0]].hv/w_c[cellid[i][0]].h
+
+            mesn = np.sqrt(norm[0]*norm[0]+ norm[1]*norm[1])
+
+            s_n = norm / mesn
+
+            u_g = u_i*(s_n[1]*s_n[1] - s_n[0]*s_n[0]) - 2.0*v_i*s_n[0]*s_n[1]
+            v_g = v_i*(s_n[0]*s_n[0] - s_n[1]*s_n[1]) - 2.0*u_i*s_n[0]*s_n[1]
+
+            w_ghost[i].h = w_c[cellid[i][0]].h
+            w_ghost[i].Z = w_c[cellid[i][0]].Z
+            w_ghost[i].hc = w_c[cellid[i][0]].hc
+
+            w_ghost[i].hu = w_c[cellid[i][0]].h * u_g
+            w_ghost[i].hv = w_c[cellid[i][0]].h * v_g
+
+        #elif name[i] != 0:
+        #    w_ghost[i] = w_c[cellid[i][0]]
 
     return w_ghost
 
@@ -846,7 +953,7 @@ def save_paraview_results(w_c, niter, miter, time, dtime, rank, size, cells, nod
     data = {"h": data, "u":data, "v": data, "c": data, "Z":data}
     
     maxh = np.zeros(1)
-    maxh = max(w_c.hc)
+    maxh = max(w_c.h)
     integral_sum = np.zeros(1)
 
     COMM.Reduce(maxh, integral_sum, MPI.MAX, 0)

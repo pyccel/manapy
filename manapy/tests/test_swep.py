@@ -29,7 +29,7 @@ def test_swep():
 
     if RANK == 0:
         #reading gmsh file and partitioning into size subdomains
-        filename = os.path.join(MESH_DIR, "meshpaper2007.msh")
+        filename = os.path.join(MESH_DIR, "meshpaper2010.msh")
         ddm.meshpart(SIZE, filename)
         #removing existing vtk files
         mypath = "results"
@@ -88,9 +88,9 @@ def test_swep():
     dt_i = np.zeros(1)
     COMM.Allreduce(d_t, dt_i, MPI.MIN)
     d_t = np.float64(dt_i)
-
+    
     time = 0
-    tfinal = 500
+    tfinal = 10
     #order = 3 #(1 : first order, 2: van albada, 3: barth jeperson)
 
     #saving 25 vtk file
@@ -129,9 +129,15 @@ def test_swep():
                                      faces.cellid, cells.faceid, cells.center, halos.centvol,
                                      faces.center, faces.normal, faces.halofid,
                                      faces.name, mystruct)
+        source = ddm.term_source(w_c, w_ghost, cells.nodeid, cells.faceid, cells.center, faces.cellid,
+                                 faces.nodeid, faces.normal, faces.center, nodes.vertex, mystruct)
+
 
         #update the new solution
-        w_n = ddm.update(w_c, w_n, d_t, rezidus, cells.volume)
+        w_n = ddm.update(w_c, w_n, d_t, rezidus, source, cells.volume)
+        
+        #for i in range(len(w_c)):
+        #    w_c[i].hu = (cells.center[i][0] - 14000)/5400 * np.cos(np.pi*(4*time/86400 + 1/2))
 
         #save vtk files for the solution
         if niter%tot == 0:
