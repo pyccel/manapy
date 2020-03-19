@@ -29,7 +29,7 @@ def test_swep():
 
     if RANK == 0:
         #reading gmsh file and partitioning into size subdomains
-        filename = os.path.join(MESH_DIR, "meshpaper2010.msh")
+        filename = os.path.join(MESH_DIR, "meshpaper2007.msh")
         ddm.meshpart(SIZE, filename)
         #removing existing vtk files
         mypath = "results"
@@ -90,7 +90,7 @@ def test_swep():
     d_t = np.float64(dt_i)
     
     time = 0
-    tfinal = 10
+    tfinal = 5000
     #order = 3 #(1 : first order, 2: van albada, 3: barth jeperson)
 
     #saving 25 vtk file
