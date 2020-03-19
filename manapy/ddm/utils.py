@@ -730,92 +730,92 @@ def explicitscheme(w_c, w_x, w_y, w_ghost, w_halo, wx_halo, wy_halo, cellid, fac
 
     return rezidus
 
-@njit(fastmath=True)
-def term_source(w_c, w_ghost, nodeidc, faceidc, centerc, cellidf, nodeidf, normalf,
-                centerf, vertex, mystruct):
-
-    source = np.zeros(len(w_c), dtype=mystruct)
-    trv = np.zeros(1, dtype=mystruct)[0]
-
-    zv = np.zeros(3)
-    ss = np.zeros((3, 2))
-    ns = np.zeros((3, 2))
-    mata = np.zeros(3)
-    matb = np.zeros(3)
-    v_1 = np.zeros(3, dtype=np.int8)
-    v_2 = np.zeros(3, dtype=np.int8)
-
-    grav = 9.81
-
-    for i in range(len(source)):
-        G = centerc[i]
-        c_1 = 0
-        c_2 = 0
-
-        for j in range(3):
-            f = faceidc[i][j]
-            c = centerf[f]
-
-            if cellidf[f][1] != -1:
-                if i == cellidf[f][0]:
-                    trv = w_c[cellidf[f][1]]
-                else:
-                    trv = w_c[cellidf[f][0]]
-            else:
-                trv = w_ghost[f]
-
-            if np.dot(G-c, normalf[f]) < 0.0:
-                ss[j] = normalf[f]
-            else:
-                ss[j] = -1.0*normalf[f]
-
-            zv[j] = trv.Z
-            mata[j] = trv.h*ss[j][0]
-            matb[j] = trv.h*ss[j][1]
-            c_1 = c_1 + pow(0.5*(w_c[i].h+trv.h),2)*ss[j][0]
-            c_2 = c_2 + pow(0.5*(w_c[i].h+trv.h),2)*ss[j][1]
-
-            v_1[j] = nodeidf[f][0]
-            v_2[j] = nodeidf[f][1]
-
-
-        c_3 = 3.0 * w_c[i].h;
-
-        delta  = (mata[1]*matb[2]-mata[2]*matb[1]) - (mata[0]*matb[2]-matb[0]*mata[2]) + (mata[0]*matb[1]-matb[0]*mata[1])
-
-        deltax = c_3*(mata[1]*matb[2]-mata[2]*matb[1]) - (c_1*matb[2]-c_2*mata[2]) + (c_1*matb[1]-c_2*mata[1])
-
-        deltay = (c_1*matb[2]-c_2*mata[2]) - c_3*(mata[0]*matb[2]-matb[0]*mata[2]) + (mata[0]*c_2-matb[0]*c_1)
-
-        deltaz = (mata[1]*c_2-matb[1]*c_1) - (mata[0]*c_2-matb[0]*c_1) + c_3*(mata[0]*matb[1]-matb[0]*mata[1])
-
-        h_1 = deltax/delta
-        h_2 = deltay/delta
-        h_3 = deltaz/delta
-
-        z_1 = w_c[i].Z + w_c[i].h - h_1
-        z_2 = w_c[i].Z + w_c[i].h - h_2
-        z_3 = w_c[i].Z + w_c[i].h - h_3
-           
-        a = np.array([vertex[nodeidc[i][0]][0], vertex[nodeidc[i][0]][1]])
-        b = np.array([vertex[nodeidc[i][1]][0], vertex[nodeidc[i][1]][1]])
-        c = np.array([vertex[nodeidc[i][2]][0], vertex[nodeidc[i][2]][1]])
-        
-        ns[0] = np.array([-(G[1]-a[1]),(G[0]-a[0])])
-        ns[1] = np.array([-(G[1]-b[1]),(G[0]-b[0])])#ns[0] - ss[1]  #  N23
-        ns[2] = np.array([-(G[1]-c[1]),(G[0]-c[0])])#ns[0] + ss[0]  #  N31
-            
-        s_1 = h_1*((z_1+zv[0])*(ss[0]/2.0) + (z_1+z_2)*(ns[0]/2.0) + (z_1+z_3)*((-1)*ns[2]/2.0));
-        s_2 = h_2*((z_2+zv[1])*(ss[1]/2.0) + (z_2+z_1)*((-1)*ns[0]/2.0) + (z_2+z_3)*(ns[1]/2.0));
-        s_3 = h_3*((z_3+zv[2])*(ss[2]/2.0) + (z_3+z_1)*(ns[2]/2.0) + (z_3+z_2)*((-1)*ns[1]/2.0));
-
-        source[i].h = 0
-        source[i].hu = 0.#-grav*(s_1[0] + s_2[0] + s_3[0])
-        source[i].hv = 0.#-grav*(s_1[1] + s_2[1] + s_3[1])
-        source[i].hc = 0.
-        source[i].Z = 0.
-
-    return source
+#@njit(fastmath=True)
+#def term_source(w_c, w_ghost, nodeidc, faceidc, centerc, cellidf, nodeidf, normalf,
+#                centerf, vertex, mystruct):
+#
+#    source = np.zeros(len(w_c), dtype=mystruct)
+#    trv = np.zeros(1, dtype=mystruct)[0]
+#
+#    zv = np.zeros(3)
+#    ss = np.zeros((3, 2))
+#    ns = np.zeros((3, 2))
+#    mata = np.zeros(3)
+#    matb = np.zeros(3)
+#    v_1 = np.zeros(3, dtype=np.int8)
+#    v_2 = np.zeros(3, dtype=np.int8)
+#
+#    grav = 9.81
+#
+#    for i in range(len(source)):
+#        G = centerc[i]
+#        c_1 = 0
+#        c_2 = 0
+#
+#        for j in range(3):
+#            f = faceidc[i][j]
+#            c = centerf[f]
+#
+#            if cellidf[f][1] != -1:
+#                if i == cellidf[f][0]:
+#                    trv = w_c[cellidf[f][1]]
+#                else:
+#                    trv = w_c[cellidf[f][0]]
+#            else:
+#                trv = w_ghost[f]
+#
+#            if np.dot(G-c, normalf[f]) < 0.0:
+#                ss[j] = normalf[f]
+#            else:
+#                ss[j] = -1.0*normalf[f]
+#
+#            zv[j] = trv.Z
+#            mata[j] = trv.h*ss[j][0]
+#            matb[j] = trv.h*ss[j][1]
+#            c_1 = c_1 + pow(0.5*(w_c[i].h+trv.h),2)*ss[j][0]
+#            c_2 = c_2 + pow(0.5*(w_c[i].h+trv.h),2)*ss[j][1]
+#
+#            v_1[j] = nodeidf[f][0]
+#            v_2[j] = nodeidf[f][1]
+#
+#
+#        c_3 = 3.0 * w_c[i].h;
+#
+#        delta  = (mata[1]*matb[2]-mata[2]*matb[1]) - (mata[0]*matb[2]-matb[0]*mata[2]) + (mata[0]*matb[1]-matb[0]*mata[1])
+#
+#        deltax = c_3*(mata[1]*matb[2]-mata[2]*matb[1]) - (c_1*matb[2]-c_2*mata[2]) + (c_1*matb[1]-c_2*mata[1])
+#
+#        deltay = (c_1*matb[2]-c_2*mata[2]) - c_3*(mata[0]*matb[2]-matb[0]*mata[2]) + (mata[0]*c_2-matb[0]*c_1)
+#
+#        deltaz = (mata[1]*c_2-matb[1]*c_1) - (mata[0]*c_2-matb[0]*c_1) + c_3*(mata[0]*matb[1]-matb[0]*mata[1])
+#
+#        h_1 = deltax/delta
+#        h_2 = deltay/delta
+#        h_3 = deltaz/delta
+#
+#        z_1 = w_c[i].Z + w_c[i].h - h_1
+#        z_2 = w_c[i].Z + w_c[i].h - h_2
+#        z_3 = w_c[i].Z + w_c[i].h - h_3
+#           
+#        a = np.array([vertex[nodeidc[i][0]][0], vertex[nodeidc[i][0]][1]])
+#        b = np.array([vertex[nodeidc[i][1]][0], vertex[nodeidc[i][1]][1]])
+#        c = np.array([vertex[nodeidc[i][2]][0], vertex[nodeidc[i][2]][1]])
+#        
+#        ns[0] = np.array([-(G[1]-a[1]),(G[0]-a[0])])
+#        ns[1] = np.array([-(G[1]-b[1]),(G[0]-b[0])])#ns[0] - ss[1]  #  N23
+#        ns[2] = np.array([-(G[1]-c[1]),(G[0]-c[0])])#ns[0] + ss[0]  #  N31
+#            
+#        s_1 = h_1*((z_1+zv[0])*(ss[0]/2.0) + (z_1+z_2)*(ns[0]/2.0) + (z_1+z_3)*((-1)*ns[2]/2.0));
+#        s_2 = h_2*((z_2+zv[1])*(ss[1]/2.0) + (z_2+z_1)*((-1)*ns[0]/2.0) + (z_2+z_3)*(ns[1]/2.0));
+#        s_3 = h_3*((z_3+zv[2])*(ss[2]/2.0) + (z_3+z_1)*(ns[2]/2.0) + (z_3+z_2)*((-1)*ns[1]/2.0));
+#
+#        source[i].h = 0
+#        source[i].hu = 0.#-grav*(s_1[0] + s_2[0] + s_3[0])
+#        source[i].hv = 0.#-grav*(s_1[1] + s_2[1] + s_3[1])
+#        source[i].hc = 0.
+#        source[i].Z = 0.
+#
+#    return source
 
 @njit(fastmath=True)
 def update(w_c, wnew, dtime, rezidus, volume):
