@@ -747,7 +747,7 @@ def term_source(w_c, w_ghost, nodeidc, faceidc, centerc, cellidf, nodeidf, norma
 
     grav = 9.81
 
-    for i in range(len(Q)):
+    for i in range(len(source)):
         G = centerc[i]
         c_1 = 0
         c_2 = 0
