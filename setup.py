@@ -41,7 +41,7 @@ install_requires = [
     'meshio<4',
     'mpi4py',
     'mgmetis',
-    'numba',
+    'numba>0.4',
     'scipy',
     #'timeit',
     ]

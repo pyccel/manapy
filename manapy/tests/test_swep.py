@@ -29,7 +29,7 @@ def test_swep():
 
     if RANK == 0:
         #reading gmsh file and partitioning into size subdomains
-        filename = os.path.join(MESH_DIR, "meshpaper2007.msh")
+        filename = os.path.join(MESH_DIR, "meshpaper2010.msh")
         ddm.meshpart(SIZE, filename)
         #removing existing vtk files
         mypath = "results"
@@ -66,7 +66,7 @@ def test_swep():
     w_c = np.recarray(nbelements, dtype=mystruct)
     w_x = np.recarray(nbelements, dtype=mystruct)
     w_y = np.recarray(nbelements, dtype=mystruct)
-    source = np.recarray(nbelements, dtype=mystruct)
+    #source = np.recarray(nbelements, dtype=mystruct)
     w_ghost = np.recarray(nbfaces, dtype=mystruct)
 
 
@@ -91,7 +91,7 @@ def test_swep():
     d_t = np.float64(dt_i)
     
     time = 0
-    tfinal = 5000
+    tfinal = 1
     #order = 3 #(1 : first order, 2: van albada, 3: barth jeperson)
 
     #saving 25 vtk file
@@ -112,11 +112,11 @@ def test_swep():
         w_halosend = ddm.define_halosend(w_c, w_halosend, indsend)
         w_halo = ddm.all_to_all(w_halosend, taille, mystruct, variables,
                                 scount, sdepl, rcount, rdepl)
-
-        #compute derivative
-        w_x, w_y = ddm.derivxy(w_c, w_ghost, w_halo, cells.center, halos.centvol,
-                               nodes.cellid, nodes.halonid, cells.nodeid, w_x, w_y)
-
+        if order == 2:
+            #compute derivative
+            w_x, w_y = ddm.derivxy(w_c, w_ghost, w_halo, cells.center, halos.centvol,
+                                   nodes.cellid, nodes.halonid, cells.nodeid, w_x, w_y)
+    
         #update the halo  derivatives values
         wx_halosend = ddm.define_halosend(w_x, wx_halosend, indsend)
         wy_halosend = ddm.define_halosend(w_y, wy_halosend, indsend)
@@ -131,12 +131,15 @@ def test_swep():
                                      faces.cellid, cells.faceid, cells.center, halos.centvol,
                                      faces.center, faces.normal, faces.halofid,
                                      faces.name, mystruct, order)
-        #source = ddm.term_source(w_c, w_ghost, cells.nodeid, cells.faceid, cells.center, faces.cellid,
-        #                         faces.nodeid, faces.normal, faces.center, nodes.vertex, mystruct)
+        #update the source term 
+        source = ddm.term_source(w_c, w_ghost, cells.nodeid, cells.faceid, cells.center, faces.cellid,
+                                 faces.nodeid, faces.normal, faces.center, nodes.vertex, mystruct)
 
 
         #update the new solution
-        w_n = ddm.update(w_c, w_n, d_t, rezidus, cells.volume)
+        w_n = ddm.update(w_c, w_n, d_t, rezidus, source, cells.volume)
+        w_c = w_n
+        
 
         #save vtk files for the solution
         if niter%tot == 0:
@@ -144,9 +147,7 @@ def test_swep():
                                       cells.nodeid, nodes.vertex)
             miter += 1
 
-        w_c = w_n
         niter += 1
-
         ####calculation of the time step
         d_t = ddm.time_step(w_c, cfl, faces.normal, cells.volume, cells.faceid)
         dt_i = np.zeros(1)

@@ -160,7 +160,10 @@ def create_local_mesh(file):
 
         Cells.center.append((1./3 * (x_1 + x_2 + x_3), 1./3*(y_1 + y_2 + y_3)))
         Cells.volume.append((1./2) * abs((x_1-x_2)*(y_1-y_3)-(x_1-x_3)*(y_1-y_2)))
-
+        var1 = (x_2-x_1)*(y_3-y_1)-(y_2-y_1)*(x_3-x_1)
+        if var1 < 0:
+            Cells.nodeid[i][0] = s_1;   Cells.nodeid[i][1] = s_3; Cells.nodeid[i][2] = s_2
+    
     tmp = [[] for i in range(len(Nodes.vertex))]
     longueur = [0]*len(Nodes.vertex)
     for i in range(len(Cells.nodeid)):
@@ -174,6 +177,7 @@ def create_local_mesh(file):
     for i in range(len(tmp)):
         for j in range(len(tmp[i])):
             Nodes.cellid[i][j] = tmp[i][j]
+            
 
     #Création des faces
     cellule = Cells.nodeid
@@ -183,13 +187,15 @@ def create_local_mesh(file):
     for i in range(len(cellule)):
         faces.append([cellule[i][0], cellule[i][1]])
         faces.append([cellule[i][1], cellule[i][2]])
-        faces.append([cellule[i][0], cellule[i][2]])
+        faces.append([cellule[i][2], cellule[i][0]])
         cellf.append([faces[k], faces[k+1], faces[k+2]])
         k = k+3
-
+    for i in range(len(faces)):
+        faces[i].sort()
     faces = set(tuple(x) for x in faces)
     faces = list(faces)
-
+    
+           
     facesdict = OrderedDict()
     for i in range(len(faces)):
         facesdict[faces[i]] = i
@@ -200,15 +206,16 @@ def create_local_mesh(file):
     for i in range(len(cellf)):
         Cells.faceid.append([facesdict.get(tuple(cellf[i][0])), facesdict.get(tuple(cellf[i][1])),
                              facesdict.get(tuple(cellf[i][2]))])
-
+    
     #Faces.cellid = [(-1, -1)]*len(faces)
     for i in range(len(Cells.faceid)):
         for j in range(3):
             if Faces.cellid[Cells.faceid[i][j]] == (-1, -1):
                 Faces.cellid[Cells.faceid[i][j]] = (i, -1)
+
             if Faces.cellid[Cells.faceid[i][j]][0] != i:
                 Faces.cellid[Cells.faceid[i][j]] = (Faces.cellid[Cells.faceid[i][j]][0], i)
-
+    
     #Faces aux bords (1,2,3,4), Faces à l'interieur 0    A VOIR !!!!!
     for i in range(len(faces)):
         Faces.name.append(0)
