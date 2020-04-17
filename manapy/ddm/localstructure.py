@@ -22,13 +22,13 @@ class Cells:
     faceid = []
     center = []
     volume = []
-    cellnid = []
+    cellfid = []
     globalindex = OrderedDict()
     father = Dict()
     son = Dict()
     iadiv = Dict()
 
-    def __init__(self, nodeid, faceid, center, volume, father, son, iadiv, globalindex, cellnid):
+    def __init__(self, nodeid, faceid, center, volume, father, son, iadiv, globalindex, cellfid):
         self.nodeid = nodeid    # instance variable unique to each instance
         self.faceid = faceid
         self.center = center
@@ -37,7 +37,7 @@ class Cells:
         self.son = son
         self.iadiv = iadiv
         self.globalindex = globalindex
-        self.cellnid = cellnid
+        self.cellfid = cellfid
 
 class Nodes:
     vertex = []
@@ -163,7 +163,7 @@ def create_local_mesh(file):
         var1 = (x_2-x_1)*(y_3-y_1)-(y_2-y_1)*(x_3-x_1)
         if var1 < 0:
             Cells.nodeid[i][0] = s_1;   Cells.nodeid[i][1] = s_3; Cells.nodeid[i][2] = s_2
-    
+
     tmp = [[] for i in range(len(Nodes.vertex))]
     longueur = [0]*len(Nodes.vertex)
     for i in range(len(Cells.nodeid)):
@@ -215,6 +215,28 @@ def create_local_mesh(file):
 
             if Faces.cellid[Cells.faceid[i][j]][0] != i:
                 Faces.cellid[Cells.faceid[i][j]] = (Faces.cellid[Cells.faceid[i][j]][0], i)
+                
+    Cells.cellfid =  [[] for i in range(len(Cells.nodeid))]
+    #Création des 3 triangles voisins par face
+    for i in range(len(Cells.faceid)):
+        for j in range(3):
+            f = Cells.faceid[i][j]
+            if Faces.cellid[f][1] != -1:
+                if i == Faces.cellid[f][0]:
+                    Cells.cellfid[i].append(Faces.cellid[f][1])
+                else:
+                    Cells.cellfid[i].append(Faces.cellid[f][0])
+            else:
+                Cells.cellfid[i].append(-1)         
+
+#    for i in range(len(faces)):
+#        if Faces.cellid[i][1] != -1:
+#            Cells.cellfid[Faces.cellid[i][1]].append(Faces.cellid[i][0])
+#            Cells.cellfid[Faces.cellid[i][0]].append(Faces.cellid[i][1])
+#    
+#    for i in range(len(Cells.cellfid)):
+#        if len(Cells.cellfid[i]) == 2 :
+#            Cells.cellfid[i].append(-1)
     
     #Faces aux bords (1,2,3,4), Faces à l'interieur 0    A VOIR !!!!!
     for i in range(len(faces)):
@@ -297,19 +319,26 @@ def create_halo_structure(file):
             Halo.faces[tuple([Halo.halosext[i][1], Halo.halosext[i][2]])] = k + 1
             Halo.faces[tuple([Halo.halosext[i][0], Halo.halosext[i][2]])] = k + 2
             k = k+3
-
+                
         for i in range(len(Faces.nodeid)):
-            if  Halo.faces.get(tuple([Nodes.globalindex[Faces.nodeid[i][0]],
-                                      Nodes.globalindex[Faces.nodeid[i][1]]])):
+            n1 = Nodes.globalindex[Faces.nodeid[i][0]]
+            n2 = Nodes.globalindex[Faces.nodeid[i][1]]
+            if  Halo.faces.get(tuple([n1, n2])):
 
                 Faces.cellid[i] = (Faces.cellid[i][0], -10)
                 Faces.name[i] = 10
                 Nodes.name[Faces.nodeid[i][0]] = 10
                 Nodes.name[Faces.nodeid[i][1]] = 10
-
-                Faces.halofid[i] = int((-1+Halo.faces.get(
-                    tuple([Nodes.globalindex[Faces.nodeid[i][0]],
-                           Nodes.globalindex[Faces.nodeid[i][1]]])))/3)
+                Faces.halofid[i] = int((-1+Halo.faces.get(tuple([n1, n2])))/3)
+            
+            if Halo.faces.get(tuple([n2, n1])):
+                
+                Faces.cellid[i] = (Faces.cellid[i][0], -10)
+                Faces.name[i] = 10
+                Nodes.name[Faces.nodeid[i][0]] = 10
+                Nodes.name[Faces.nodeid[i][1]] = 10
+                
+                Faces.halofid[i] = int((-1+Halo.faces.get(tuple([n2, n1])))/3)
 
         longueur = 0
         tmp = [[] for i in range(len(Nodes.name))]
@@ -330,7 +359,7 @@ def create_halo_structure(file):
 
     cells = Cells(np.asarray(Cells.nodeid), np.asarray(Cells.faceid), np.asarray(Cells.center),
                   np.asarray(Cells.volume), Cells.father,
-                  Cells.son, Cells.iadiv, Cells.globalindex, np.asarray(Cells.cellnid))
+                  Cells.son, Cells.iadiv, Cells.globalindex, np.asarray(Cells.cellfid))
     nodes = Nodes(np.asarray(Nodes.vertex), np.asarray(Nodes.name), np.asarray(Nodes.cellid),
                   Nodes.globalindex, np.asarray(Nodes.halonid))
 
@@ -445,7 +474,7 @@ def clear_class(cells, nodes, faces):
     cells.son = Dict()
     cells.iadiv = Dict()
     cells.globalindex = OrderedDict()
-    cells.cellnid = []
+    cells.cellfid = []
 
     faces.nodeid = []
     faces.name = []

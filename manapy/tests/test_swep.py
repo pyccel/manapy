@@ -29,7 +29,7 @@ def test_swep():
 
     if RANK == 0:
         #reading gmsh file and partitioning into size subdomains
-        filename = os.path.join(MESH_DIR, "meshpaper2010.msh")
+        filename = os.path.join(MESH_DIR, "rect.msh")#meshpaper2010-3.msh")
         ddm.meshpart(SIZE, filename)
         #removing existing vtk files
         mypath = "results"
@@ -66,8 +66,12 @@ def test_swep():
     w_c = np.recarray(nbelements, dtype=mystruct)
     w_x = np.recarray(nbelements, dtype=mystruct)
     w_y = np.recarray(nbelements, dtype=mystruct)
-    #source = np.recarray(nbelements, dtype=mystruct)
+    source = np.recarray(nbelements, dtype=mystruct)
     w_ghost = np.recarray(nbfaces, dtype=mystruct)
+    hexact = np.zeros(nbelements)
+    zexact = np.zeros(nbelements)
+    uexact = np.zeros(nbelements)
+    
 
 
     #compute the arrays needed for the mpi communication
@@ -80,8 +84,7 @@ def test_swep():
     w_n = w_c
     ###Initialisation
     w_c = ddm.initialisation(w_c, cells.center)
-
-
+    
     if RANK == 0: print("Start Computation")
     cfl = 0.5
     ####calculation of the time step
@@ -89,13 +92,13 @@ def test_swep():
     dt_i = np.zeros(1)
     COMM.Allreduce(d_t, dt_i, MPI.MIN)
     d_t = np.float64(dt_i)
-    
+       
     time = 0
-    tfinal = 1
+    tfinal = 0.6
     #order = 3 #(1 : first order, 2: van albada, 3: barth jeperson)
-
+  
     #saving 25 vtk file
-    tot = int(tfinal/d_t/25)
+    tot = int(tfinal/d_t/50)
     miter = 0
     niter = 0
     order = 1
@@ -105,7 +108,7 @@ def test_swep():
         time = time + d_t
 
         #update the ghost values for the boundary conditions
-        w_ghost = ddm.ghost_value(w_c, w_ghost, faces.cellid, faces.name, faces.normal)
+        w_ghost = ddm.ghost_value(w_c, w_ghost, faces.cellid, faces.name, faces.normal, time)
 
         #update the halo values
         #if SIZE > 1:
@@ -116,7 +119,7 @@ def test_swep():
             #compute derivative
             w_x, w_y = ddm.derivxy(w_c, w_ghost, w_halo, cells.center, halos.centvol,
                                    nodes.cellid, nodes.halonid, cells.nodeid, w_x, w_y)
-    
+           
         #update the halo  derivatives values
         wx_halosend = ddm.define_halosend(w_x, wx_halosend, indsend)
         wy_halosend = ddm.define_halosend(w_y, wy_halosend, indsend)
@@ -131,19 +134,26 @@ def test_swep():
                                      faces.cellid, cells.faceid, cells.center, halos.centvol,
                                      faces.center, faces.normal, faces.halofid,
                                      faces.name, mystruct, order)
+        
         #update the source term 
-        source = ddm.term_source(w_c, w_ghost, cells.nodeid, cells.faceid, cells.center, faces.cellid,
-                                 faces.nodeid, faces.normal, faces.center, nodes.vertex, mystruct)
-
-
+        source = ddm.term_source_srnh(w_c, w_ghost, w_halo, cells.nodeid, cells.faceid, cells.cellfid,
+                                         cells.center, cells.volume, faces.cellid, faces.nodeid,
+                                         faces.normal, faces.center, nodes.vertex, faces.name,
+                                         faces.halofid, mystruct)
         #update the new solution
         w_n = ddm.update(w_c, w_n, d_t, rezidus, source, cells.volume)
         w_c = w_n
         
+#        for i in range(len(source)):
+#            if source["hu"][i] > 0.0001 :
+#                print(i, source["hu"][i]/cells.volume[i], source["hv"][i]/cells.volume[i])
+        
 
         #save vtk files for the solution
         if niter%tot == 0:
-            ddm.save_paraview_results(w_c, niter, miter, time, d_t, RANK, SIZE,
+            uexact, hexact = ddm.exact_solution(uexact, hexact, zexact, cells.center, time)
+          
+            ddm.save_paraview_results(w_c, uexact, niter, miter, time, d_t, RANK, SIZE,
                                       cells.nodeid, nodes.vertex)
             miter += 1
 
@@ -154,10 +164,10 @@ def test_swep():
         COMM.Allreduce(d_t, dt_i, MPI.MIN)
         d_t = np.float64(dt_i)
         #saving 25 vtk file
-        tot = int(tfinal/d_t/25)
+        tot = int(tfinal/d_t/50)
 
     stop = timeit.default_timer()
 
     if RANK == 0: print(stop - start)
-
+#
 test_swep()

@@ -17,7 +17,9 @@ from .utils import time_step
 from .utils import update
 from .utils import derivxy
 from .utils import barthlimiter
-from .utils import term_source
+from .utils import term_source_srnh
+from .utils import term_source_vasquez
+from .utils import exact_solution
 
 from .refine_mesh      import refine_mesh
 from .refine_mesh      import set_old_information

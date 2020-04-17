@@ -34,139 +34,298 @@ def compute_flux_advection(flux, fleft, fright, wleft, wright, normal):
     flux.h = sign * sol
     flux.hu = 0
     flux.hv = 0
+    flux.hc = 0
+    flux.Z = 0
 
     return flux
 
 @njit
-def compute_flux_shallow_roe(flux, fleft, fright, wleft, wright, normal):
+def compute_flux_shallow_roe(flux, fleft, fright, w_l, w_r, normal):
     grav = 9.81
 
-    wnleft = wleft
-    wnright = wright
+    mesn = np.sqrt(normal[0]*normal[0] + normal[1]*normal[1])
+    norm = normal/mesn
 
-    tinv = np.zeros(2)
-    tinv[0] = -1*normal[1]
-    tinv[1] = normal[0]
-    mest = np.sqrt(tinv[0]**2 + tinv[1]**2)
-    mesn = np.sqrt(normal[0]**2 + normal[1]**2)
+    hroe = (w_l.h + w_r.h)/2
+    uroe = (w_l.hu / w_l.h * np.sqrt(w_l.h)
+            + w_r.hu / w_r.h * np.sqrt(w_r.h)) /(np.sqrt(w_l.h) + np.sqrt(w_r.h))
 
+    vroe = (w_l.hv / w_l.h * np.sqrt(w_l.h)
+            + w_r.hv / w_r.h * np.sqrt(w_r.h)) /(np.sqrt(w_l.h) + np.sqrt(w_r.h))
 
-    uleft = wnleft.hu*normal[0] + wnleft.hv*normal[1]
-    uleft = uleft / mesn
-    vleft = wnleft.hu*tinv[0] + wnleft.hv*tinv[1]
-    vleft = vleft / mest
-    #WL.hu = ul
-    #WL.hv = vl
+    croe = (w_l.hc / w_l.h * np.sqrt(w_l.h)
+            + w_r.hc / w_r.h * np.sqrt(w_r.h)) /(np.sqrt(w_l.h) + np.sqrt(w_r.h))
 
-    uright = wnright.hu*normal[0] + wnright.hv*normal[1]
-    uright = uright / mesn
-    vright = wnright.hu*tinv[0] + wnright.hv*tinv[1]
-    vright = vright / mest
-    #WR.hu = ur
-    #WR.hv = vr
+    velson = np.sqrt(grav * hroe)
 
+    lambda1 = uroe*norm[0] + vroe*norm[1] - velson
+    lambda2 = uroe*norm[0] + vroe*norm[1]
+    lambda3 = uroe*norm[0] + vroe*norm[1]
+    lambda4 = uroe*norm[0] + vroe*norm[1] + velson
 
-    u_lrh = (wnleft.h  + wnright.h)/2
-    u_lrhu = (uleft/wnleft.h + vright/wnright.h)/2
-    u_lrhv = (uright/wnleft.h + vright/wnright.h)/2
-
-
-    velson = np.sqrt(grav * u_lrh)
-
-    lambda1 = u_lrhu - velson
-    lambda2 = u_lrhu
-    lambda3 = u_lrhu + velson
-
-
-    rmat = np.zeros((3, 3))
-    rmati = np.zeros((3, 3))
-    almat = np.zeros((3, 3))
-    ralmat = np.zeros((3, 3))
-    ammat = np.zeros((3, 3))
+    rmat = np.zeros((4, 4))
+    rmati = np.zeros((4, 4))
+    almat = np.zeros((4, 4))
+    ralmat = np.zeros((4, 4))
+    ammat = np.zeros((4, 4))
 
     almat[0][0] = np.fabs(lambda1)
-    almat[1][0] = 0.
-    almat[2][0] = 0.
-    almat[0][1] = 0.
     almat[1][1] = np.fabs(lambda2)
-    almat[2][1] = 0.
-    almat[0][2] = 0.
-    almat[1][2] = 0.
     almat[2][2] = np.fabs(lambda3)
+    almat[3][3] = np.fabs(lambda4)
 
     rmat[0][0] = 1.
-    rmat[1][0] = lambda1
-    rmat[2][0] = u_lrhv
-    rmat[0][1] = 0.
-    rmat[1][1] = 0.
-    rmat[2][1] = 1.
-    rmat[0][2] = 1.
-    rmat[1][2] = lambda3
-    rmat[2][2] = u_lrhv
+    rmat[1][0] = uroe - norm[0]*velson
+    rmat[2][0] = vroe - norm[1]*velson
+    rmat[3][0] = croe
+    rmat[3][1] = 1.
+    rmat[1][2] = -1*norm[1]
+    rmat[2][2] = norm[0]
+    rmat[3][2] = 1
+    rmat[0][3] = 1
+    rmat[1][3] = uroe + norm[0]*velson
+    rmat[2][3] = vroe + norm[1]*velson
+    rmat[3][3] = croe
 
-    rmati[0][0] = lambda3/(2*velson)
-    rmati[1][0] = -u_lrhv
-    rmati[2][0] = -lambda1/(2*velson)
-    rmati[0][1] = -1./(2*velson)
-    rmati[1][1] = 0.
-    rmati[2][1] = 1./(2*velson)
-    rmati[0][2] = 0.
-    rmati[1][2] = 1.
-    rmati[2][2] = 0.
+    rmati[0][0] = 0.5 *(1 + (uroe*norm[0] + vroe*norm[1])/velson)
+    rmati[0][1] = -norm[0]/(2*velson)
+    rmati[0][2] = -norm[1]/(2*velson)
+
+    rmati[1][0] = vroe*norm[0] - uroe*norm[1] - croe
+    rmati[1][1] = norm[1]
+    rmati[1][2] = -1*norm[0]
+    rmati[1][3] = 1
+
+    rmati[2][0] = -vroe*norm[0] + uroe*norm[1]
+    rmati[2][1] = -1*norm[1]
+    rmati[2][2] = norm[0]
+
+    rmati[3][0] = 0.5 *(1 - (uroe*norm[0] + vroe*norm[1])/velson)
+    rmati[3][1] = norm[0]/(2*velson)
+    rmati[3][2] = norm[1]/(2*velson)
 
     ralmat = matmul(ralmat, rmat, almat)
     ammat = matmul(ammat, ralmat, rmati)
 
-    w_dif = np.zeros(3)
-    w_dif[0] = wnright.h  - wnleft.h
-    w_dif[1] = uright - uleft #WR.hu - WL.hu
-    w_dif[2] = vright - vleft #WR.hv - WL.hv
+    huleft = w_l.hu
+    hvleft = w_l.hv
+    huright = w_r.hu
+    hvright = w_r.hv
+
+    w_dif = np.zeros(4)
+    w_dif[0] = w_r.h  - w_l.h
+    w_dif[1] = huright - huleft
+    w_dif[2] = hvright - hvleft
+    w_dif[3] = w_r.hc - w_l.hc
 
     hnew = 0.
     unew = 0.
     vnew = 0.
+    cnew = 0.
 
     for i in range(3):
         hnew += ammat[0][i] * w_dif[i]
         unew += ammat[1][i] * w_dif[i]
         vnew += ammat[2][i] * w_dif[i]
+        cnew += ammat[3][i] * w_dif[i]
+
 
     u_h = hnew/2
     u_hu = unew/2
     u_hv = vnew/2
-
-    signl = uleft#WL.hu
-    signr = uright#WR.hu
-
-    p_gravl = 0.5 * grav * wnleft.h*wnleft.h
-    p_gravr = 0.5 * grav * wnright.h*wnright.h
-
-    fleft.h = signl
-    fleft.hu = signl * uleft/wnleft.h + p_gravl #WL.hu/WL.h +pl
-    fleft.hv = signl * vleft/wnleft.h      #WL.hv/WL.h
+    u_hc = cnew/2
 
 
-    fright.h = signr
-    fright.hu = signr * uright/wnright.h + p_gravr#WR.hu/WR.h +pr
-    fright.hv = signr * vright/wnright.h      #WR.hv/WR.h
+    q_l = w_l.hu * norm[0] + w_l.hv * norm[1]
+    p_l = 0.5 * grav * w_l.h * w_l.h
+
+    q_r = w_r.hu * norm[0] + w_r.hv * norm[1]
+    p_r = 0.5 * grav * w_r.h * w_r.h
+
+    fleft.h = q_l
+    fleft.hu = q_l * w_l.hu/w_l.h + p_l*norm[0]
+    fleft.hv = q_l * w_l.hv/w_l.h + p_l*norm[1]
+    fleft.hc = q_l * w_l.hc/w_l.h
+
+    fright.h = q_r
+    fright.hu = q_r * w_r.hu/w_r.h + p_r*norm[0]
+    fright.hv = q_r * w_r.hv/w_r.h + p_r*norm[1]
+    fright.hc = q_r * w_r.hc/w_r.h
 
 
     f_h = 0.5 * (fleft.h + fright.h) - u_h
     f_hu = 0.5 * (fleft.hu + fright.hu) - u_hu
     f_hv = 0.5 * (fleft.hv + fright.hv) - u_hv
-
-
+    f_hc = 0.5 * (fleft.hc + fright.hc) - u_hc
 
     flux.h = f_h * mesn
-    flux.hu = (f_hu*normal[0] + f_hv*-1*normal[1])
-    flux.hv = (f_hu*-1*tinv[0] + f_hv*tinv[1])
-    flux.hc = 0
+    flux.hu = f_hu * mesn
+    flux.hv = f_hv * mesn
+    flux.hc = f_hc * mesn
     flux.Z = 0
 
-    #print(flux)
-
-
     return flux
+
+@njit 
+def term_source_vasquez(w_c, w_ghost, nodeidc, faceidc, cellidc, centerc, volumec, cellidf,
+                        nodeidf, normalf, centerf, vertex, mystruct):
+    grav = 9.81
+
+    source = np.zeros(len(w_c), dtype=mystruct)
+    trv = np.zeros(1, dtype=mystruct)[0]
+
+
+    for i in range(len(w_c)):
+        G = centerc[i]
+        phi_ij = np.zeros(4)
+
+        for j in range(3):
+            f = faceidc[i][j]
+            n1 = vertex[nodeidf[f][0]]
+            n2 = vertex[nodeidf[f][1]]
+
+
+#            A = n2[1] - n1[1]
+#            B = n1[0] - n2[0]
+#            C = -n1[0]*(n2[1]-n1[1]) + n1[1]*(n2[0]-n1[0])
+#
+#            d_ij_1 = np.fabs(A*G[0] + B*G[1]+C)/np.sqrt(A**2+B**2)
+
+            c = centerf[f]
+
+            mesn = np.sqrt(normalf[f][0]*normalf[f][0] + normalf[f][1]*normalf[f][1])
+            aire_ij = 1./2 * np.fabs((n1[0] - n2[0])*(n1[1]-G[1]) - (n1[0] - G[0])*(n1[1]-n2[1]))
+            dist_ij = 2 * aire_ij / mesn
+
+            if cellidf[f][1] != -1:
+                trv = w_c[cellidc[i][j]]
+            else:
+                trv = w_ghost[f]
+
+
+            if np.dot(G-c, normalf[f]) < 0.0:
+                ss = normalf[f]/mesn
+            else:
+                ss = -1.0*normalf[f]/mesn
+
+            hroe = (w_c[i].h + trv.h)/2
+            uroe = (w_c[i].hu / w_c[i].h * np.sqrt(w_c[i].h)
+                    + trv.hu / trv.h * np.sqrt(trv.h)) /(np.sqrt(w_c[i].h) + np.sqrt(trv.h))
+
+            vroe = (w_c[i].hv / w_c[i].h * np.sqrt(w_c[i].h)
+                    + trv.hv / trv.h * np.sqrt(trv.h)) /(np.sqrt(w_c[i].h) + np.sqrt(trv.h))
+
+            croe = (w_c[i].hc / w_c[i].h * np.sqrt(w_c[i].h)
+                    + trv.hc / trv.h * np.sqrt(trv.h)) /(np.sqrt(w_c[i].h) + np.sqrt(trv.h))
+
+
+            velson = np.sqrt(grav * hroe)
+
+            lambda1 = uroe*ss[0] + vroe*ss[1] - velson
+            lambda2 = uroe*ss[0] + vroe*ss[1]
+            lambda3 = uroe*ss[0] + vroe*ss[1]
+            lambda4 = uroe*ss[0] + vroe*ss[1] + velson
+
+            rmat = np.zeros((4, 4))
+            rmati = np.zeros((4, 4))
+            almat = np.zeros((4, 4))
+            ralmat = np.zeros((4, 4))
+            ammat = np.zeros((4, 4))
+            ident = np.zeros((4, 4))
+            s_ij = np.zeros(4)
+
+
+            if lambda1 > 1e-3:
+                sign1 = 1
+            elif lambda1 < -1e-3:
+                sign1 = -1
+            else:
+                sign1 = 0
+
+            if lambda2 > 1e-3:
+                sign2 = 1
+            elif lambda2 < -1e-03:
+                sign2 = -1
+            else:
+                sign2 = 0
+
+            if lambda3 > 1e-3:
+                sign3 = 1
+            elif lambda3 < -1e-03:
+                sign3 = -1
+            else:
+                sign3 = 0
+
+            if lambda4 > 1e-3:
+                sign4 = 1
+            elif lambda4 < -1e-03:
+                sign4 = -1
+            else:
+                sign4 = 0
+
+            ident[0][0] = 1.
+            ident[1][1] = 1.
+            ident[2][2] = 1.
+            ident[3][3] = 1.
+
+            almat[0][0] = sign1
+            almat[1][1] = sign2
+            almat[2][2] = sign3
+            almat[3][3] = sign4
+
+            rmat[0][0] = 1.
+            rmat[1][0] = uroe - ss[0]*velson
+            rmat[2][0] = vroe - ss[1]*velson
+            rmat[3][0] = croe
+            rmat[3][1] = 1.
+            rmat[1][2] = -1*ss[1]
+            rmat[2][2] = ss[0]
+            rmat[3][2] = 1.
+            rmat[0][3] = 1.
+            rmat[1][3] = uroe + ss[0]*velson
+            rmat[2][3] = vroe + ss[1]*velson
+            rmat[3][3] = croe
+
+            rmati[0][0] = 0.5 *(1 + (uroe*ss[0] + vroe*ss[1])/velson)
+            rmati[0][1] = -ss[0]/(2*velson)
+            rmati[0][2] = -ss[1]/(2*velson)
+
+            rmati[1][0] = vroe*ss[0] - uroe*ss[1] - croe
+            rmati[1][1] = ss[1]
+            rmati[1][2] = -1*ss[0]
+            rmati[1][3] = 1
+
+            rmati[2][0] = -vroe*ss[0] + uroe*ss[1]
+            rmati[2][1] = -1*ss[1]
+            rmati[2][2] = ss[0]
+
+            rmati[3][0] = 0.5 *(1 - (uroe*ss[0] + vroe*ss[1])/velson)
+            rmati[3][1] = ss[0]/(2*velson)
+            rmati[3][2] = ss[1]/(2*velson)
+
+            ralmat = matmul(ralmat, rmat, almat)
+            ammat = matmul(ammat, ralmat, rmati)
+
+            matricer = ident - ammat
+
+            s_ij[0] = 0
+            s_ij[1] = -grav * (w_c[i].h + trv.h)/2 * (trv.Z - w_c[i].Z)/dist_ij * ss[0]
+            s_ij[2] = -grav * (w_c[i].h + trv.h)/2 * (trv.Z - w_c[i].Z)/dist_ij * ss[1]
+            s_ij[3] = 0
+
+            for k in range(len(phi_ij)):
+                phi_ij[0] += matricer[0][k] * s_ij[k]
+                phi_ij[1] += matricer[1][k] * s_ij[k]
+                phi_ij[2] += matricer[2][k] * s_ij[k]
+                phi_ij[3] += matricer[3][k] * s_ij[k]
+
+            source[i].h += phi_ij[0] * aire_ij
+            source[i].hu += phi_ij[1] * aire_ij
+            source[i].hv += phi_ij[2] * aire_ij
+            source[i].hc += phi_ij[3] * aire_ij
+            source[i].Z = 0
+
+    return source
 
 @njit(fastmath=True)
 def compute_flux_shallow_srnh(flux, fleft, fright, w_l, w_r, normal):
@@ -183,11 +342,13 @@ def compute_flux_shallow_srnh(flux, fleft, fright, w_l, w_r, normal):
 
 
     u_h = (wn_l.hu / wn_l.h * np.sqrt(wn_l.h)
-           + wr_l.hu / wr_l.h * np.sqrt(wr_l.h)) /(np.sqrt(wr_l.h) + np.sqrt(wr_l.h))
+           + wr_l.hu / wr_l.h * np.sqrt(wr_l.h)) /(np.sqrt(wn_l.h) + np.sqrt(wr_l.h))
+
     v_h = (wn_l.hv / wn_l.h * np.sqrt(wn_l.h)
-           + wr_l.hv / wr_l.h * np.sqrt(wr_l.h)) /(np.sqrt(wr_l.h) + np.sqrt(wr_l.h))
+           + wr_l.hv / wr_l.h * np.sqrt(wr_l.h)) /(np.sqrt(wn_l.h) + np.sqrt(wr_l.h))
+
     c_h = (wn_l.hc / wn_l.h * np.sqrt(wn_l.h)
-           + wr_l.hc / wr_l.h * np.sqrt(wr_l.h)) /(np.sqrt(wr_l.h) + np.sqrt(wr_l.h))
+           + wr_l.hc / wr_l.h * np.sqrt(wr_l.h)) /(np.sqrt(wn_l.h) + np.sqrt(wr_l.h))
 
 
     #uvh = np.array([uh, vh])
@@ -346,7 +507,6 @@ def compute_flux_shallow_srnh(flux, fleft, fright, w_l, w_r, normal):
 
     q_s = normal[0] * unew + normal[1] * vnew
 
-
     flux.h = q_s
     flux.hu = q_s * w_lrhu/w_lrh + 0.5 * grav * w_lrh * w_lrh * normal[0]
     flux.hv = q_s * w_lrhv/w_lrh + 0.5 * grav * w_lrh * w_lrh * normal[1]
@@ -354,6 +514,94 @@ def compute_flux_shallow_srnh(flux, fleft, fright, w_l, w_r, normal):
     flux.Z = 0.
 
     return flux
+
+@njit(fastmath=True)
+def term_source_srnh(w_c, w_ghost, w_halo, nodeidc, faceidc, cellidc, centerc, volumec, cellidf,
+                     nodeidf, normalf, centerf, vertex, name, halofid, mystruct):
+
+    source = np.zeros(len(w_c), dtype=mystruct)
+    trv = np.zeros(1, dtype=mystruct)[0]
+
+    zv = np.zeros(3)
+    ss = np.zeros((3, 2))
+
+    mata = np.zeros(3)
+    matb = np.zeros(3)
+
+
+    grav = 9.81
+
+    for i in range(len(source)):
+        ns = np.zeros((3, 2))
+
+        G = centerc[i]
+        c_1 = 0
+        c_2 = 0
+
+        for j in range(3):
+            f = faceidc[i][j]
+            c = centerf[f]
+
+            if name[f] == 10:
+                trv = w_halo[halofid[f]]
+
+            elif name[f] == 0:# cellidf[f][1] != -1:
+                trv = w_c[cellidc[i][j]]
+            else:
+                trv = w_ghost[f]
+
+            if np.dot(G-c, normalf[f]) < 0.0:
+                ss[j] = normalf[f]
+            else:
+                ss[j] = -1.0*normalf[f]
+
+            zv[j] = trv.Z
+            mata[j] = trv.h*ss[j][0]
+            matb[j] = trv.h*ss[j][1]
+            c_1 = c_1 + pow(0.5*(w_c[i].h+trv.h), 2)*ss[j][0]
+            c_2 = c_2 + pow(0.5*(w_c[i].h+trv.h), 2)*ss[j][1]
+
+        c_3 = 3.0 * w_c[i].h
+
+        delta = (mata[1]*matb[2]-mata[2]*matb[1]) - (mata[0]*matb[2]-matb[0]*mata[2]) + (mata[0]*matb[1]-matb[0]*mata[1])
+
+        deltax = c_3*(mata[1]*matb[2]-mata[2]*matb[1]) - (c_1*matb[2]-c_2*mata[2]) + (c_1*matb[1]-c_2*mata[1])
+
+        deltay = (c_1*matb[2]-c_2*mata[2]) - c_3*(mata[0]*matb[2]-matb[0]*mata[2]) + (mata[0]*c_2-matb[0]*c_1)
+
+        deltaz = (mata[1]*c_2-matb[1]*c_1) - (mata[0]*c_2-matb[0]*c_1) + c_3*(mata[0]*matb[1]-matb[0]*mata[1])
+
+        h_1 = deltax/delta
+        h_2 = deltay/delta
+        h_3 = deltaz/delta
+
+        z_1 = w_c[i].Z + w_c[i].h - h_1
+        z_2 = w_c[i].Z + w_c[i].h - h_2
+        z_3 = w_c[i].Z + w_c[i].h - h_3
+
+        b = np.array([vertex[nodeidc[i][1]][0], vertex[nodeidc[i][1]][1]])
+
+        ns[0] = np.array([(G[1]-b[1]), -(G[0]-b[0])])
+        ns[1] = ns[0] - ss[1]  #  N23
+        ns[2] = ns[0] + ss[0]  #  N31
+
+#        s_1 = h_1*((z_1+zv[0])*(ss[0]/2.0) + (z_1+z_2)*(ns[0]/2.0) + (z_1+z_3)*((-1)*ns[2]/2.0));
+#        s_2 = h_2*((z_2+zv[1])*(ss[1]/2.0) + (z_2+z_1)*((-1)*ns[0]/2.0) + (z_2+z_3)*(ns[1]/2.0));
+#        s_3 = h_3*((z_3+zv[2])*(ss[2]/2.0) + (z_3+z_1)*(ns[2]/2.0) + (z_3+z_2)*((-1)*ns[1]/2.0));
+
+
+        s_1 = 0.5*h_1*(zv[0]*ss[0] + z_2*ns[0] + z_3*(-1)*ns[2])
+        s_2 = 0.5*h_2*(zv[1]*ss[1] + z_1*(-1)*ns[0] + z_3*ns[1])
+        s_3 = 0.5*h_3*(zv[2]*ss[2] + z_1*ns[2] + z_2*(-1)*ns[1])
+
+        source[i].h = 0
+        source[i].hu = -grav*(s_1[0] + s_2[0] + s_3[0])
+        source[i].hv = -grav*(s_1[1] + s_2[1] + s_3[1])
+        source[i].hc = 0.
+        source[i].Z = 0.
+
+
+    return source
 
 @njit(fastmath=True)
 def compute_flux_shallow_rusanov(flux, fleft, fright, w_l, w_r, normal):
@@ -469,7 +717,7 @@ def derivxy(w_c, w_ghost, w_halo, centerc, centerh, cellnid, halonid, nodeid, w_
 
                     j_xhc += (j_x * (w_c[cell].hc - w_c[i].hc))
                     j_yhc += (j_y * (w_c[cell].hc - w_c[i].hc))
-                    
+
                     j_xz += (j_x * (w_c[cell].Z - w_c[i].Z))
                     j_yz += (j_y * (w_c[cell].Z - w_c[i].Z))
 
@@ -495,7 +743,7 @@ def derivxy(w_c, w_ghost, w_halo, centerc, centerh, cellnid, halonid, nodeid, w_
 
                         j_xhc += (j_x * (w_halo[cell].hc - w_c[i].hc))
                         j_yhc += (j_y * (w_halo[cell].hc - w_c[i].hc))
-                        
+
                         j_xz += (j_x * (w_halo[cell].Z - w_c[i].Z))
                         j_yz += (j_y * (w_halo[cell].Z - w_c[i].Z))
 
@@ -521,7 +769,7 @@ def derivxy(w_c, w_ghost, w_halo, centerc, centerh, cellnid, halonid, nodeid, w_
 
 @njit
 def barthlimiter(w_c, w_x, w_y, psi, cellid, faceid, centerc, centerf):
-    var = "h"
+    var = "hu"
     for i in range(len(w_c)): psi[i] = 1
 
     for i in range(len(w_c)):
@@ -740,96 +988,10 @@ def explicitscheme(w_c, w_x, w_y, w_ghost, w_halo, wx_halo, wy_halo, cellid, fac
     return rezidus
 
 @njit(fastmath=True)
-def term_source(w_c, w_ghost, nodeidc, faceidc, centerc, cellidf, nodeidf, normalf,
-                centerf, vertex, mystruct):
-
-    source = np.zeros(len(w_c), dtype=mystruct)
-    trv = np.zeros(1, dtype=mystruct)[0]
-
-    zv = np.zeros(3)
-    ss = np.zeros((3, 2))
-    ns = np.zeros((3, 2))
-    mata = np.zeros(3)
-    matb = np.zeros(3)
-
-    voisin = np.zeros(3, dtype=np.int32)
-
-    grav = 9.81
-
-    for i in range(len(source)):
-        G = centerc[i]
-        c_1 = 0
-        c_2 = 0
-
-        for j in range(3):
-            f = faceidc[i][j]
-            c = centerf[f]
-
-            if cellidf[f][1] != -1:
-                if i == cellidf[f][0]:
-                    trv = w_c[cellidf[f][1]]
-                    voisin[j] = cellidf[f][1]
-                else:
-                    trv = w_c[cellidf[f][0]]
-                    voisin[j] = cellidf[f][0]
-            else:
-                trv = w_ghost[f]
-
-            if np.dot(G-c, normalf[f]) < 0.0:
-                ss[j] = normalf[f]
-            else:
-                ss[j] = -1.0*normalf[f]
-            
-            zv[j] = trv.Z
-            mata[j] = trv.h*ss[j][0]
-            matb[j] = trv.h*ss[j][1]
-            c_1 = c_1 + pow(0.5*(w_c[i].h+trv.h),2)*ss[j][0]
-            c_2 = c_2 + pow(0.5*(w_c[i].h+trv.h),2)*ss[j][1]
-
-        c_3 = 3.0 * w_c[i].h;
-
-        delta  = (mata[1]*matb[2]-mata[2]*matb[1]) - (mata[0]*matb[2]-matb[0]*mata[2]) + (mata[0]*matb[1]-matb[0]*mata[1])
-
-        deltax = c_3*(mata[1]*matb[2]-mata[2]*matb[1]) - (c_1*matb[2]-c_2*mata[2]) + (c_1*matb[1]-c_2*mata[1])
-
-        deltay = (c_1*matb[2]-c_2*mata[2]) - c_3*(mata[0]*matb[2]-matb[0]*mata[2]) + (mata[0]*c_2-matb[0]*c_1)
-
-        deltaz = (mata[1]*c_2-matb[1]*c_1) - (mata[0]*c_2-matb[0]*c_1) + c_3*(mata[0]*matb[1]-matb[0]*mata[1])
-
-        h_1 = deltax/delta
-        h_2 = deltay/delta
-        h_3 = deltaz/delta
-        
-        z_1 = w_c[i].Z + w_c[i].h - h_1
-        z_2 = w_c[i].Z + w_c[i].h - h_2
-        z_3 = w_c[i].Z + w_c[i].h - h_3
-
-        a = np.array([vertex[nodeidc[i][0]][0], vertex[nodeidc[i][0]][1]])
-        b = np.array([vertex[nodeidc[i][1]][0], vertex[nodeidc[i][1]][1]])
-        c = np.array([vertex[nodeidc[i][2]][0], vertex[nodeidc[i][2]][1]])
-        
-        ns[0] = np.array([(G[1]-b[1]),-(G[0]-b[0])])
-        ns[1] = np.array([(G[1]-c[1]),-(G[0]-c[0])])#ns[0] - ss[1]  #  N23
-        ns[2] = np.array([(G[1]-a[1]),-(G[0]-a[0])])#ns[0] + ss[0]  #  N31
-        
-              
-        s_1 = h_1*((z_1+zv[0])*(ss[0]/2.0) + (z_1+z_2)*(ns[0]/2.0) + (z_1+z_3)*((-1)*ns[2]/2.0));
-        s_2 = h_2*((z_2+zv[1])*(ss[1]/2.0) + (z_2+z_1)*((-1)*ns[0]/2.0) + (z_2+z_3)*(ns[1]/2.0));
-        s_3 = h_3*((z_3+zv[2])*(ss[2]/2.0) + (z_3+z_1)*(ns[2]/2.0) + (z_3+z_2)*((-1)*ns[1]/2.0));
-        
-        source[i].h = 0
-        source[i].hu = -grav*(s_1[0] + s_2[0] + s_3[0])
-        source[i].hv = -grav*(s_1[1] + s_2[1] + s_3[1])
-        source[i].hc = 0.
-        source[i].Z = 0.
-
-    return source
-
-@njit(fastmath=True)
 def update(w_c, wnew, dtime, rez, src, vol):
     for i in range(len(w_c)):
 
-        wnew.h[i] = w_c.h[i]  + dtime  * ((rez["h"][i] + src["h"][i])/vol[i])
+        wnew.h[i] = w_c.h[i]  + dtime  * ((rez["h"][i]  + src["h"][i])/vol[i])
         wnew.hu[i] = w_c.hu[i] + dtime * ((rez["hu"][i] + src["hu"][i])/vol[i])
         wnew.hv[i] = w_c.hv[i] + dtime * ((rez["hv"][i] + src["hv"][i])/vol[i])
         wnew.hc[i] = w_c.hc[i] + dtime * ((rez["hc"][i] + src["hc"][i])/vol[i])
@@ -859,106 +1021,198 @@ def time_step(w_c, cfl, normal, volume, faceid):
     return dtime
 
 @njit(fastmath=True)
+def exact_solution(uexact, hexact, zexact, center, time):
+
+    grav = 9.81
+    h_m = 2.534
+    u_m = 4.03
+    h_1 = 5.
+    h_2 = 1.
+
+    s = np.sqrt(43.925)
+
+    x_0 = 6.
+    x_1 = x_0 - time * np.sqrt(grav * h_1)
+    x_2 = x_0 + (u_m - np.sqrt(grav * h_m))
+    x_3 = x_0 + s*time
+
+    for i in range(len(center)):
+        xcent = center[i][0]
+        if xcent < x_1:
+            hexact[i] = h_1
+            uexact[i] = 0
+
+        elif xcent < x_2 and xcent >= x_1:
+            hexact[i] = 1/(9*grav) * (2*np.sqrt(grav*h_1) - (xcent-x_0)/time)**2
+            uexact[i] = 2/3 * (np.sqrt(grav*h_1) + (xcent-x_0)/time)
+
+        elif xcent < x_3 and xcent >= x_2:
+            hexact[i] = h_m
+            uexact[i] = u_m
+
+        elif xcent >= x_3:
+            hexact[i] = h_2
+            uexact[i] = 0
+
+
+#        if np.fabs(xcent - 1500/2) <= 1500/8 :
+#            zexact[i] = 8#10 + (40*xcent/14000) + 10*np.sin(np.pi*(4*xcent/14000 - 0.5))
+#
+#        hexact[i] = 20 - zexact[i] - 4*np.sin(np.pi*(4*time/86400 + 0.5))
+#        #hexact[i] = 64.5 - zexact[i] - 4*np.sin(np.pi*(4*time/86400 + 0.5))
+#
+#        uexact[i] = (xcent - 1500)*np.pi/(5400*hexact[i]) * np.cos(np.pi*(4*time/86400 + 0.5))
+
+    return uexact, hexact
+
+@njit(fastmath=True)
 def initialisation(w_c, center):
 
     nbelements = len(center)
-    sigma1 = 264
-    sigma2 = 264
-    c_1 = 10
-    c_2 = 6.5
-    x_1 = 1400
-    y_1 = 1400
-    x_2 = 2400
-    y_2 = 2400
+#    sigma1 = 264
+#    sigma2 = 264
+#    c_1 = 10
+#    c_2 = 6.5
+#    x_1 = 1400
+#    y_1 = 1400
+#    x_2 = 2400
+#    y_2 = 2400
 
-    choix = 2 # (0,creneau 1:gaussienne)
+    choix = 0 # (0,creneau 1:gaussienne)
     if choix == 0:
         for i in range(nbelements):
             xcent = center[i][0]
             ycent = center[i][1]
-            if xcent <= 5.:
+            if xcent <= 6:
                 w_c.h[i] = 5.
             else:
-                w_c.h[i] = 2.5
+                w_c.h[i] = 1.
 
             w_c.hu[i] = 0.
             w_c.hv[i] = 0.
             w_c.hc[i] = 0.
-            w_c.Z[i] = 1.
+            w_c.Z[i] = 0.
 
     elif choix == 1:
         for i in range(nbelements):
             xcent = center[i][0]
             ycent = center[i][1]
 
-            w_c.h[i] = 1#+np.exp(-30*(pow(x-2, 2) + pow(y-1.5, 2)))
-            #w_c.hc[i] = np.exp(-30*(pow(xcent-2, 2) + pow(ycent-1.5, 2)))
-            w_c.hc[i] = c_1 * np.exp(-1* (pow(xcent - x_1, 2) 
-                + pow(ycent -y_1, 2))/ pow(sigma1, 2)) + c_2 * np.exp(-1* (pow(xcent - x_2, 2) 
-                + pow(ycent -y_2, 2))/ pow(sigma2, 2))
+            w_c.h[i] = 1+np.exp(-30*(pow(xcent-2, 2) + pow(ycent-1.5, 2)))
+            w_c.hc[i] = 0#np.exp(-30*(pow(xcent-2, 2) + pow(ycent-1.5, 2)))
+#            w_c.hc[i] = c_1 * np.exp(-1* (pow(xcent - x_1, 2)
+#                + pow(ycent -y_1, 2))/ pow(sigma1, 2)) + c_2 * np.exp(-1* (pow(xcent - x_2, 2)
+#                + pow(ycent -y_2, 2))/ pow(sigma2, 2))
             w_c.hu[i] = 0.5
-            w_c.hv[i] = 0.5
+            w_c.hv[i] = 0.
             w_c.Z[i] = 0.
 
     elif choix == 2:
         L = 14000
         for i in range(nbelements):
             xcent = center[i][0]
-            ycent = center[i][1]        
-            
-            w_c.Z[i] = 0.8 * np.exp(-5*(xcent - 1)**2 - 50* (ycent - 0.5)**2) #
-            #w_c.Z[i] = 10 + (40*xcent/L) + 10*np.sin(np.pi*(4*xcent/L - 0.5))
-            w_c.h[i] = 1 - w_c.Z[i]
-            #w_c.h[i] = 60.5 - w_c.Z[i]
+            ycent = center[i][1]
+
+            #w_c.Z[i] = 0.8 * np.exp(-5*(xcent - 1)**2 - 50* (ycent - 0.5)**2) #
+            w_c.Z[i] = 10 + (40*xcent/L) + 10*np.sin(np.pi*(4*xcent/L - 0.5))
+            #w_c.h[i] = 1 - w_c.Z[i]
+            w_c.h[i] = 60.5 - w_c.Z[i]
 
             w_c.hu[i] = 0.
             w_c.hv[i] = 0.
             w_c.hc[i] = 0.
-            
+
+    elif choix == 3:
+        for i in range(nbelements):
+            xcent = center[i][0]
+            ycent = center[i][1]
+            w_c.Z[i] = 0
+
+            if np.fabs(xcent - 1500/2) <= 1500/8:
+                w_c.Z[i] = 8
+
+            w_c.h[i] = 16 - w_c.Z[i]
+            w_c.hu[i] = 0.
+            w_c.hv[i] = 0.
+            w_c.hc[i] = 0.
+
+
+    elif choix == 4:
+        for i in range(nbelements):
+            xcent = center[i][0]
+            ycent = center[i][1]
+
+            w_c.Z[i] = (10*np.exp(-1*((xcent-2)**2+(ycent-6)**2)) + 15*np.exp(-1*((xcent-2.5)**2+(ycent-2.5)**2)))/20
+            w_c.Z[i] += (12*np.exp(-1*((xcent-5)**2+(ycent-5)**2)) + 6*np.exp(-2*((xcent-7.5)**2+(ycent-7.5)**2)))/20
+            w_c.Z[i] += (16*np.exp(-1*((xcent-7.5)**2+(ycent-2)**2)))/20
+
+            w_c.h[i] = 1 - w_c.Z[i]
+
+            w_c.hu[i] = 0.
+            w_c.hv[i] = 0.
+            w_c.hc[i] = 0.
+
     return w_c
 
 @njit
-def ghost_value(w_c, w_ghost, cellid, name, normal):
+def ghost_value(w_c, w_ghost, cellid, name, normal, time):
 
+#    L = 86400
     for i in range(len(cellid)):
-#        if (name[i] == 3 or name[i] == 4 ):
-#        #if name[i] != 0:
-#            #slip conditions
-#            norm = normal[i]
-#            #print(name[i], i)
+#        w_ghost[i] = w_c[cellid[i][0]]
+#        aa = 4*time/L + 0.5
 #
-#            u_i = w_c[cellid[i][0]].hu/w_c[cellid[i][0]].h
-#            v_i = w_c[cellid[i][0]].hv/w_c[cellid[i][0]].h
+#        if name[i] == 1:
+#            w_ghost[i].h = 20 - 4*np.sin(np.pi * aa)
+#            u = -1500 * np.pi/(5400*w_ghost[i].h) * np.cos(np.pi * aa)
+#            v = 0
 #
-#            mesn = np.sqrt(norm[0]*norm[0]+ norm[1]*norm[1])
+#            w_ghost[i].hu = w_ghost[i].h * u
+#            w_ghost[i].hv = w_ghost[i].h * v
 #
-#            s_n = norm / mesn
-#
-#            u_g = u_i*(s_n[1]*s_n[1] - s_n[0]*s_n[0]) - 2.0*v_i*s_n[0]*s_n[1]
-#            v_g = v_i*(s_n[0]*s_n[0] - s_n[1]*s_n[1]) - 2.0*u_i*s_n[0]*s_n[1]
-#
-#            w_ghost[i].h = w_c[cellid[i][0]].h
-#            w_ghost[i].Z = w_c[cellid[i][0]].Z
-#            w_ghost[i].hc = w_c[cellid[i][0]].hc
-#
-#            w_ghost[i].hu = w_c[cellid[i][0]].h * u_g
-#            w_ghost[i].hv = w_c[cellid[i][0]].h * v_g
+#        elif name[i] == 2:
+#            w_ghost[i].hu = 0
+#            w_ghost[i].hv = 0
 
-#        elif name[i] != 0:
-        w_ghost[i] = w_c[cellid[i][0]]
+        if (name[i] == 3 or name[i] == 4):
+            #slip conditions
+            norm = normal[i]
+
+            u_i = w_c[cellid[i][0]].hu/w_c[cellid[i][0]].h
+            v_i = w_c[cellid[i][0]].hv/w_c[cellid[i][0]].h
+
+            mesn = np.sqrt(norm[0]*norm[0]+ norm[1]*norm[1])
+
+            s_n = norm / mesn
+
+            u_g = u_i*(s_n[1]*s_n[1] - s_n[0]*s_n[0]) - 2.0*v_i*s_n[0]*s_n[1]
+            v_g = v_i*(s_n[0]*s_n[0] - s_n[1]*s_n[1]) - 2.0*u_i*s_n[0]*s_n[1]
+
+            w_ghost[i].h = w_c[cellid[i][0]].h
+            w_ghost[i].Z = w_c[cellid[i][0]].Z
+            w_ghost[i].hc = w_c[cellid[i][0]].hc
+
+            w_ghost[i].hu = w_c[cellid[i][0]].h * u_g
+            w_ghost[i].hv = w_c[cellid[i][0]].h * v_g
+
+        elif (name[i] == 1 or name[i] == 2):
+            w_ghost[i] = w_c[cellid[i][0]]
+#        if name[i] !=0:
+#            w_ghost[i] = w_c[cellid[i][0]]
 
     return w_ghost
 
-def save_paraview_results(w_c, niter, miter, time, dtime, rank, size, cells, nodes):
+def save_paraview_results(w_c, solexact, niter, miter, time, dtime, rank, size, cells, nodes):
 
     elements = {"triangle": cells}
     points = []
     for i in nodes:
         points.append([i[0], i[1], i[2]])
 
-    data = {"h" : w_c.h, "u" : w_c.hu/w_c.h, "v": w_c.hv/w_c.h, "c": w_c.hc/w_c.h, "Z": w_c.Z, "h+Z": w_c.h + w_c.Z}
-    data = {"h": data, "u":data, "v": data, "c": data, "Z":data, "h+Z":data}
-    
+    data = {"h" : w_c.h, "u" : w_c.hu/w_c.h, "v": w_c.hv/w_c.h, "c": w_c.hc/w_c.h, "Z": w_c.Z,
+            "h+Z": w_c.h + w_c.Z, "exact": solexact}
+    data = {"h": data, "u":data, "v": data, "c": data, "Z":data, "h+Z":data, "exact":data}
+
     maxh = np.zeros(1)
     maxh = max(w_c.h)
     integral_sum = np.zeros(1)
@@ -992,7 +1246,8 @@ def save_paraview_results(w_c, niter, miter, time, dtime, rank, size, cells, nod
             text_file.write("<PDataArray type=\"Float64\" Name=\"v\" format=\"binary\"/>\n")
             text_file.write("<PDataArray type=\"Float64\" Name=\"c\" format=\"binary\"/>\n")
             text_file.write("<PDataArray type=\"Float64\" Name=\"Z\" format=\"binary\"/>\n")
-            text_file.write("<PDataArray type=\"Float64\" Name=\"Z+h\" format=\"binary\"/>\n")
+            text_file.write("<PDataArray type=\"Float64\" Name=\"h+Z\" format=\"binary\"/>\n")
+            text_file.write("<PDataArray type=\"Float64\" Name=\"exact\" format=\"binary\"/>\n")
             text_file.write("</PCellData>\n")
             for i in range(size):
                 name1 = "visu"
