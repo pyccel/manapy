@@ -177,7 +177,7 @@ def create_local_mesh(file):
     for i in range(len(tmp)):
         for j in range(len(tmp[i])):
             Nodes.cellid[i][j] = tmp[i][j]
-            
+
 
     #Création des faces
     cellule = Cells.nodeid
@@ -194,8 +194,8 @@ def create_local_mesh(file):
         faces[i].sort()
     faces = set(tuple(x) for x in faces)
     faces = list(faces)
-    
-           
+
+
     facesdict = OrderedDict()
     for i in range(len(faces)):
         facesdict[faces[i]] = i
@@ -206,7 +206,7 @@ def create_local_mesh(file):
     for i in range(len(cellf)):
         Cells.faceid.append([facesdict.get(tuple(cellf[i][0])), facesdict.get(tuple(cellf[i][1])),
                              facesdict.get(tuple(cellf[i][2]))])
-    
+
     #Faces.cellid = [(-1, -1)]*len(faces)
     for i in range(len(Cells.faceid)):
         for j in range(3):
@@ -215,8 +215,8 @@ def create_local_mesh(file):
 
             if Faces.cellid[Cells.faceid[i][j]][0] != i:
                 Faces.cellid[Cells.faceid[i][j]] = (Faces.cellid[Cells.faceid[i][j]][0], i)
-                
-    Cells.cellfid =  [[] for i in range(len(Cells.nodeid))]
+
+    Cells.cellfid = [[] for i in range(len(Cells.nodeid))]
     #Création des 3 triangles voisins par face
     for i in range(len(Cells.faceid)):
         for j in range(3):
@@ -227,17 +227,17 @@ def create_local_mesh(file):
                 else:
                     Cells.cellfid[i].append(Faces.cellid[f][0])
             else:
-                Cells.cellfid[i].append(-1)         
+                Cells.cellfid[i].append(-1)
 
 #    for i in range(len(faces)):
 #        if Faces.cellid[i][1] != -1:
 #            Cells.cellfid[Faces.cellid[i][1]].append(Faces.cellid[i][0])
 #            Cells.cellfid[Faces.cellid[i][0]].append(Faces.cellid[i][1])
-#    
+#
 #    for i in range(len(Cells.cellfid)):
 #        if len(Cells.cellfid[i]) == 2 :
 #            Cells.cellfid[i].append(-1)
-    
+
     #Faces aux bords (1,2,3,4), Faces à l'interieur 0    A VOIR !!!!!
     for i in range(len(faces)):
         Faces.name.append(0)
@@ -319,7 +319,7 @@ def create_halo_structure(file):
             Halo.faces[tuple([Halo.halosext[i][1], Halo.halosext[i][2]])] = k + 1
             Halo.faces[tuple([Halo.halosext[i][0], Halo.halosext[i][2]])] = k + 2
             k = k+3
-                
+
         for i in range(len(Faces.nodeid)):
             n1 = Nodes.globalindex[Faces.nodeid[i][0]]
             n2 = Nodes.globalindex[Faces.nodeid[i][1]]
@@ -330,14 +330,14 @@ def create_halo_structure(file):
                 Nodes.name[Faces.nodeid[i][0]] = 10
                 Nodes.name[Faces.nodeid[i][1]] = 10
                 Faces.halofid[i] = int((-1+Halo.faces.get(tuple([n1, n2])))/3)
-            
+
             if Halo.faces.get(tuple([n2, n1])):
-                
+
                 Faces.cellid[i] = (Faces.cellid[i][0], -10)
                 Faces.name[i] = 10
                 Nodes.name[Faces.nodeid[i][0]] = 10
                 Nodes.name[Faces.nodeid[i][1]] = 10
-                
+
                 Faces.halofid[i] = int((-1+Halo.faces.get(tuple([n2, n1])))/3)
 
         longueur = 0
