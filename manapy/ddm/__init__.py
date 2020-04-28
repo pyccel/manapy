@@ -9,17 +9,21 @@ from .localstructure import halo_value
 from .localstructure import all_to_all
 from .localstructure import clear_class
 
-from .utils import ghost_value
-from .utils import explicitscheme
-from .utils import save_paraview_results
-from .utils import initialisation
-from .utils import time_step
-from .utils import update
-from .utils import derivxy
-from .utils import barthlimiter
-from .utils import term_source_srnh
-from .utils import term_source_vasquez
-from .utils import exact_solution
+#from .utils import ghost_value
+#from .utils import save_paraview_results
+#from .utils import initialisation
+#from .utils import time_step
+#from .utils import update
+#from .utils import derivxy
+#from .utils import exact_solution
+#from .utils import update_fluxes
+from .utils import *
+
+from .fvm import explicitscheme
+from .fvm import term_source_srnh
+from .fvm import term_source_vasquez
+from .fvm import compute_flux_fvc
+
 
 from .refine_mesh      import refine_mesh
 from .refine_mesh      import set_old_information

@@ -29,7 +29,7 @@ def test_swep():
 
     if RANK == 0:
         #reading gmsh file and partitioning into size subdomains
-        filename = os.path.join(MESH_DIR, "rect.msh")#meshpaper2010-3.msh")
+        filename = os.path.join(MESH_DIR, "meshpaper2010-3.msh")
         ddm.meshpart(SIZE, filename)
         #removing existing vtk files
         mypath = "results"
@@ -54,7 +54,7 @@ def test_swep():
 
     nbelements = len(cells.center)
     nbfaces = len(faces.name)
-    #nbnodes = len(nodes.vertex)
+    nbnodes = len(nodes.vertex)
 
     variables = tuple(['h', 'hu', 'hv', 'hc', 'Z'])
     mystruct = np.dtype([('h', np.float64),
@@ -67,6 +67,7 @@ def test_swep():
     w_x = np.recarray(nbelements, dtype=mystruct)
     w_y = np.recarray(nbelements, dtype=mystruct)
     source = np.recarray(nbelements, dtype=mystruct)
+    rezidus = np.recarray(nbelements, dtype=mystruct)
     w_ghost = np.recarray(nbfaces, dtype=mystruct)
     hexact = np.zeros(nbelements)
     zexact = np.zeros(nbelements)
@@ -93,8 +94,10 @@ def test_swep():
     d_t = np.float64(dt_i)
 
     time = 0
-    tfinal = 0.6
-    order = 1 #(1 : first order, 2: barth jeperson)
+    tfinal = 10800
+    order = 1 #(1 : first order, 2: barth jeperson 3: van albada)
+    term_convec = "on"
+    term_source = "on"
 
     #saving 25 vtk file
     tot = int(tfinal/d_t/50)
@@ -113,7 +116,7 @@ def test_swep():
         w_halosend = ddm.define_halosend(w_c, w_halosend, indsend)
         w_halo = ddm.all_to_all(w_halosend, taille, mystruct, variables,
                                 scount, sdepl, rcount, rdepl)
-        if order == 2:
+        if order != 1:
             #compute derivative
             w_x, w_y = ddm.derivxy(w_c, w_ghost, w_halo, cells.center, halos.centvol,
                                    nodes.cellid, nodes.halonid, cells.nodeid, w_x, w_y)
@@ -127,27 +130,37 @@ def test_swep():
         wy_halo = ddm.all_to_all(wy_halosend, taille, mystruct, variables,
                                  scount, sdepl, rcount, rdepl)
 
-        #update the rezidus using explicit scheme
-        rezidus = ddm.explicitscheme(w_c, w_x, w_y, w_ghost, w_halo, wx_halo, wy_halo,
-                                     faces.cellid, cells.faceid, cells.center, halos.centvol,
-                                     faces.center, faces.normal, faces.halofid,
-                                     faces.name, mystruct, order)
+        #compute the fluxes
+        rezidus, source = ddm.update_fluxes(w_c, w_ghost, w_halo, w_x, w_y, wx_halo, wy_halo,
+                                             cells.nodeid, cells.faceid, cells.cellfid, cells.center,
+                                             cells.volume, faces.cellid, faces.nodeid, faces.normal,
+                                             faces.center, faces.name, faces.halofid, nodes.vertex, 
+                                             halos.centvol, mystruct, order, term_convec, term_source)
 
-        #update the source term 
-        source = ddm.term_source_srnh(w_c, w_ghost, w_halo, cells.nodeid, cells.faceid, cells.cellfid,
-                                      cells.center, cells.volume, faces.cellid, faces.nodeid,
-                                      faces.normal, faces.center, nodes.vertex, faces.name,
-                                      faces.halofid, mystruct)
         #update the new solution
         w_n = ddm.update(w_c, w_n, d_t, rezidus, source, cells.volume)
         w_c = w_n
 
         #save vtk files for the solution
         if niter%tot == 0:
+            saving_at_node = 1
             uexact, hexact = ddm.exact_solution(uexact, hexact, zexact, cells.center, time)
 
-            ddm.save_paraview_results(w_c, uexact, niter, miter, time, d_t, RANK, SIZE,
+            if saving_at_node :
+                w_node = np.zeros(nbnodes, dtype=mystruct)
+                unode_exact = np.zeros(nbnodes)
+                
+                w_node, unode_exact = ddm.centertovertex(w_c, w_ghost, w_halo, cells.center, halos.centvol, 
+                                            nodes.cellid, nodes.halonid, nodes.vertex, nodes.name,
+                                            w_node, uexact, unode_exact)
+                ddm.save_paraview_results(w_node, unode_exact, niter, miter, time, d_t, RANK, SIZE,
+                                          cells.nodeid, nodes.vertex)
+           
+            else:
+                ddm.save_paraview_results(w_c, uexact, niter, miter, time, d_t, RANK, SIZE,
                                       cells.nodeid, nodes.vertex)
+
+
             miter += 1
 
         niter += 1
