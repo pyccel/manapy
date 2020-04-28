@@ -94,7 +94,7 @@ def test_swep():
     d_t = np.float64(dt_i)
 
     time = 0
-    tfinal = 10800
+    tfinal = 10
     order = 1 #(1 : first order, 2: barth jeperson 3: van albada)
     term_convec = "on"
     term_source = "on"
