@@ -218,6 +218,7 @@ def test_swep():
         d_t = np.float64(dt_i)
         #d_t = 0.0001
         #saving 25 vtk file
+        print(d_t)
         tot = int(tfinal/d_t/50)
 
 
