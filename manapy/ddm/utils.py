@@ -692,15 +692,15 @@ def exact_solution(uexact, hexact, zexact, center, time, grav):
     nbelement = len(center)
 #    h_m = 2.534
 #    u_m = 4.03
-#    h_1 = 100
-#    h_2 = 0.
-#    
-#    x_0 = 4600
-#    c_o = np.sqrt(grav*h_1)
-#    #s_s = np.sqrt(0.5*grav*h_m*(1.+(h_m/h_2)))
-#
-#    x_1 = x_0 - c_o*time
-#    x_2 = x_0 + 2.*c_o*time# - 3.*np.sqrt(grav*h_m)*time
+    h_1 = 5
+    h_2 = 0.
+    
+    x_0 = 6.
+    c_o = np.sqrt(grav*h_1)
+    #s_s = np.sqrt(0.5*grav*h_m*(1.+(h_m/h_2)))
+
+    x_1 = x_0 - c_o*time
+    x_2 = x_0 + 2.*c_o*time# - 3.*np.sqrt(grav*h_m)*time
 #    #x_3 = s_s*time + x_0
 #    xl = 40.
 #    cmax = 1.
@@ -709,30 +709,30 @@ def exact_solution(uexact, hexact, zexact, center, time, grav):
 
     for i in range(nbelement):
         xcent = center[i][0]
-#        if xcent < x_1:
-#            hexact[i] = h_1
-#            uexact[i] = 0
-#
-#        elif xcent < x_2 and xcent >= x_1:
-#            hexact[i] = 1/(9*grav) * (2*np.sqrt(grav*h_1) - (xcent-x_0)/time)**2
-#            uexact[i] = 2/3 * (np.sqrt(grav*h_1) + (xcent-x_0)/time)
-#
-##        elif xcent < x_3 and xcent >= x_2:
-##            hexact[i] = h_m
-##            uexact[i] = u_m
-#
-#        elif xcent >= x_2:
-#            hexact[i] = h_2
-#            uexact[i] = 0
+        if xcent < x_1:
+            hexact[i] = h_1
+            uexact[i] = 0
 
+        elif xcent < x_2 and xcent >= x_1:
+            hexact[i] = 1/(9*grav) * (2*np.sqrt(grav*h_1) - (xcent-x_0)/time)**2
+            uexact[i] = 2/3 * (np.sqrt(grav*h_1) + (xcent-x_0)/time)
 
-        if np.fabs(xcent - 1500/2) <= 1500/8 :
-            zexact[i] = 8#10 + (40*xcent/14000) + 10*np.sin(np.pi*(4*xcent/14000 - 0.5))
-    
-        hexact[i] = 20 - zexact[i] - 4*np.sin(np.pi*(4*time/86400 + 0.5))
-        #hexact[i] = 64.5 - zexact[i] - 4*np.sin(np.pi*(4*time/86400 + 0.5))
-    
-        uexact[i] = (xcent - 1500)*np.pi/(5400*hexact[i]) * np.cos(np.pi*(4*time/86400 + 0.5))
+#        elif xcent < x_3 and xcent >= x_2:
+#            hexact[i] = h_m
+#            uexact[i] = u_m
+
+        elif xcent >= x_2:
+            hexact[i] = h_2
+            uexact[i] = 0
+
+#
+#        if np.fabs(xcent - 1500/2) <= 1500/8 :
+#            zexact[i] = 8#10 + (40*xcent/14000) + 10*np.sin(np.pi*(4*xcent/14000 - 0.5))
+#    
+#        hexact[i] = 20 - zexact[i] - 4*np.sin(np.pi*(4*time/86400 + 0.5))
+#        #hexact[i] = 64.5 - zexact[i] - 4*np.sin(np.pi*(4*time/86400 + 0.5))
+#    
+#        uexact[i] = (xcent - 1500)*np.pi/(5400*hexact[i]) * np.cos(np.pi*(4*time/86400 + 0.5))
 #        
 
 #        xcent = center[i][0]
@@ -756,13 +756,13 @@ def initialisation(w_c, center):
     x_2 = 2400
     y_2 = 2400
 
-    choix = 3
+    choix = 0
     if choix == 0: #Dam break
         for i in range(nbelements):
             xcent = center[i][0]
             ycent = center[i][1]
-            if (xcent <= 4143):
-                w_c.h[i] = 100.
+            if (xcent <= 6.):
+                w_c.h[i] = 5.
                 w_c.hu[i] = 0.
                 w_c.Z[i] = 0.
             else:
@@ -879,24 +879,24 @@ def initialisation(w_c, center):
 @njit
 def ghost_value(w_c, w_ghost, cellid, name, normal, mesure, time):
 
-    L = 86400
+#    L = 86400
     nbface = len(cellid)
     
     for i in range(nbface):
         w_ghost[i] = w_c[cellid[i][0]]
-        aa = 4*time/L + 0.5
-
-        if name[i] == 1:
-            w_ghost[i].h = 20 - 4*np.sin(np.pi * aa)
-            u = -1500 * np.pi/(5400*w_ghost[i].h) * np.cos(np.pi * aa)
-            v = 0
-
-            w_ghost[i].hu = w_ghost[i].h * u
-            w_ghost[i].hv = w_ghost[i].h * v
-
-        elif name[i] == 2:
-            w_ghost[i].hu = 0
-            w_ghost[i].hv = 0
+#        aa = 4*time/L + 0.5
+#
+#        if name[i] == 1:
+#            w_ghost[i].h = 20 - 4*np.sin(np.pi * aa)
+#            u = -1500 * np.pi/(5400*w_ghost[i].h) * np.cos(np.pi * aa)
+#            v = 0
+#
+#            w_ghost[i].hu = w_ghost[i].h * u
+#            w_ghost[i].hv = w_ghost[i].h * v
+#
+#        elif name[i] == 2:
+#            w_ghost[i].hu = 0
+#            w_ghost[i].hv = 0
 
         if (name[i] == 3 or name[i] == 4):
         #slip conditions
