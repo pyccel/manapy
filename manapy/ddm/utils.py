@@ -659,7 +659,7 @@ def update(w_c, wnew, dtime, rez, src, corio, dissip, vol):
 def time_step(w_c, cfl, normal, mesure, volume, faceid, grav, term_dissipative, term_convective, 
               D_xx, D_yy):
     nbelement =  len(faceid)
-    dt_c = 1e6*np.ones(nbelement)
+    dt_c = 1e6
     epsilon = 1e-6
 
     for i in range(nbelement):
@@ -681,9 +681,9 @@ def time_step(w_c, cfl, normal, mesure, volume, faceid, grav, term_dissipative, 
                  lam_diff = 0.5*(D_xx * mes**2 + D_yy * mes**2)
                  lam += lam_diff/volume[i]
         if lam != 0:                 
-            dt_c[i] = cfl * volume[i]/lam#min(dt_c, cfl * volume[i]/lam)
+            dt_c = min(dt_c, cfl * volume[i]/lam)
 
-    dtime = np.asarray(np.min(dt_c))
+    dtime = np.asarray(dt_c)#np.min(dt_c))
 
     return dtime
 
