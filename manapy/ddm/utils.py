@@ -690,18 +690,18 @@ def time_step(w_c, cfl, normal, mesure, volume, faceid, grav, term_dissipative, 
 @njit(fastmath=True)
 def exact_solution(uexact, hexact, zexact, center, time, grav):
     nbelement = len(center)
-#    h_m = 2.534
-#    u_m = 4.03
+    h_m = 2.534
+    u_m = 4.03
     h_1 = 5
-    h_2 = 0.
+    h_2 = 1.
     
     x_0 = 6.
     c_o = np.sqrt(grav*h_1)
-    #s_s = np.sqrt(0.5*grav*h_m*(1.+(h_m/h_2)))
+    s_s = np.sqrt(0.5*grav*h_m*(1.+(h_m/h_2)))
 
     x_1 = x_0 - c_o*time
-    x_2 = x_0 + 2.*c_o*time# - 3.*np.sqrt(grav*h_m)*time
-#    #x_3 = s_s*time + x_0
+    x_2 = x_0 + 2.*c_o*time - 3.*np.sqrt(grav*h_m)*time
+    x_3 = s_s*time + x_0
 #    xl = 40.
 #    cmax = 1.
 #    sigma = 0.25
@@ -717,11 +717,11 @@ def exact_solution(uexact, hexact, zexact, center, time, grav):
             hexact[i] = 1/(9*grav) * (2*np.sqrt(grav*h_1) - (xcent-x_0)/time)**2
             uexact[i] = 2/3 * (np.sqrt(grav*h_1) + (xcent-x_0)/time)
 
-#        elif xcent < x_3 and xcent >= x_2:
-#            hexact[i] = h_m
-#            uexact[i] = u_m
+        elif xcent < x_3 and xcent >= x_2:
+            hexact[i] = h_m
+            uexact[i] = u_m
 
-        elif xcent >= x_2:
+        elif xcent >= x_3:
             hexact[i] = h_2
             uexact[i] = 0
 
@@ -766,7 +766,7 @@ def initialisation(w_c, center):
                 w_c.hu[i] = 0.
                 w_c.Z[i] = 0.
             else:
-                w_c.h[i] = 0
+                w_c.h[i] = 1.
                 w_c.Z[i] = 0.   
                 w_c.hu[i] = 0
             

@@ -94,10 +94,10 @@ def test_swep():
     if RANK == 0: print("Start Computation")
     cfl = 0.5
     time = 0
-    tfinal = 0.2
+    tfinal = 0.6
     order = 1#(1:first order, 2:barth jeperson 3:van albada 4:minmod)
     term_convec = "on"
-    term_source = "on"
+    term_source = "off"
     term_coriolis = "off"
     term_dissipative = "off"
     grav = 9.81
