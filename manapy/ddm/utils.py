@@ -683,7 +683,7 @@ def time_step(w_c, cfl, normal, mesure, volume, faceid, grav, term_dissipative, 
         if lam != 0:                 
             dt_c[i] = cfl * volume[i]/lam#min(dt_c, cfl * volume[i]/lam)
 
-    dtime = np.asarray(dt_c)#np.min(dt_c))
+    dtime = np.asarray(np.min(dt_c))
 
     return dtime
 
