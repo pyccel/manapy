@@ -23,12 +23,15 @@ class Cells:
     center = []
     volume = []
     cellfid = []
+    nf = [] #normal sortante des faces
+    cellnid = []
     globalindex = OrderedDict()
     father = Dict()
     son = Dict()
     iadiv = Dict()
 
-    def __init__(self, nodeid, faceid, center, volume, father, son, iadiv, globalindex, cellfid):
+    def __init__(self, nodeid, faceid, center, volume, father, son, iadiv, globalindex, cellfid, cellnid,
+                 nf):
         self.nodeid = nodeid    # instance variable unique to each instance
         self.faceid = faceid
         self.center = center
@@ -38,6 +41,8 @@ class Cells:
         self.iadiv = iadiv
         self.globalindex = globalindex
         self.cellfid = cellfid
+        self.cellnid = cellnid
+        self.nf = nf
 
 class Nodes:
     vertex = []
@@ -45,13 +50,15 @@ class Nodes:
     cellid = []
     globalindex = OrderedDict()
     halonid = []
+    ghostcenter = []
 
-    def __init__(self, vertex, name, cellid, globalindex, halonid):
+    def __init__(self, vertex, name, cellid, globalindex, halonid, ghostcenter):
         self.vertex = vertex    # instance variable unique to each instance
         self.name = name
         self.cellid = cellid
         self.globalindex = globalindex
         self.halonid = halonid
+        self.ghostcenter = ghostcenter
 
 class Faces:
     nodeid = []
@@ -59,17 +66,21 @@ class Faces:
     name = []
     halofid = []
     normal = []
+    mesure = []
     bound = 0
     center = []
+    ghostcenter = []
 
-    def __init__(self, nodeid, cellid, name, normal, center, bound, halofid):
+    def __init__(self, nodeid, cellid, name, normal, mesure, center, bound, halofid, ghostcenter):
         self.nodeid = nodeid    # instance variable unique to each instance
         self.cellid = cellid
         self.name = name
         self.normal = normal
+        self.mesure = mesure
         self.bound = bound
         self.halofid = halofid
         self.center = center
+        self.ghostcenter = ghostcenter
 
 class Halo:
     halosint = []
@@ -113,8 +124,10 @@ def normalvector(node_a, node_b, bary):
 
     normal[0] = normal[0]
     normal[1] = normal[1]
+    
+    mesure = np.sqrt(normal[0]**2 + normal[1]**2)
 
-    return normal
+    return normal, mesure
 
 def create_local_mesh(file):
 
@@ -139,7 +152,7 @@ def create_local_mesh(file):
             continue
         if line == "halosint\n":
             break
-        Nodes.vertex.append([float(x) for x in line.split()])
+        Nodes.vertex.append([np.double(x) for x in line.split()])
         Nodes.name = [0]*len(Nodes.vertex)
 
     for i in range(len(Nodes.vertex)):
@@ -165,19 +178,34 @@ def create_local_mesh(file):
             Cells.nodeid[i][0] = s_1;   Cells.nodeid[i][1] = s_3; Cells.nodeid[i][2] = s_2
 
     tmp = [[] for i in range(len(Nodes.vertex))]
-    longueur = [0]*len(Nodes.vertex)
+    longn = [0]*len(Nodes.vertex)
     for i in range(len(Cells.nodeid)):
         for j in range(3):
             tmp[Cells.nodeid[i][j]].append(i)
-            longueur[Cells.nodeid[i][j]] = longueur[Cells.nodeid[i][j]] + 1
+            longn[Cells.nodeid[i][j]] = longn[Cells.nodeid[i][j]] + 1
+    
+    longc = [0]*len(Cells.nodeid)
+    tmp2 = [[] for i in range(len(Cells.nodeid))]
+    for i in range(len(Cells.nodeid)):
+        for j in range(3):
+            for k in range(len(tmp[Cells.nodeid[i][j]])):
+                if (tmp[Cells.nodeid[i][j]][k] not in tmp2[i] and  tmp[Cells.nodeid[i][j]][k] != i):
+                    tmp2[i].append(tmp[Cells.nodeid[i][j]][k])
+                    longc[i] = longc[i] + 1
 
-    maxlen = max(longueur)
-    Nodes.cellid = [[-1]*maxlen for i in range(len(Nodes.vertex))]
+    maxlongn = max(longn)
+    Nodes.cellid = [[-1]*maxlongn for i in range(len(Nodes.vertex))]
 
     for i in range(len(tmp)):
         for j in range(len(tmp[i])):
             Nodes.cellid[i][j] = tmp[i][j]
-
+    
+    maxlongc = max(longc)
+    Cells.cellnid = [[-1]*maxlongc for i in range(len(Cells.nodeid))]
+    
+    for i in range(len(tmp2)):
+        for j in range(len(tmp2[i])):
+            Cells.cellnid[i][j] = tmp2[i][j]
 
     #Création des faces
     cellule = Cells.nodeid
@@ -228,7 +256,7 @@ def create_local_mesh(file):
                     Cells.cellfid[i].append(Faces.cellid[f][0])
             else:
                 Cells.cellfid[i].append(-1)
-
+    
 #    for i in range(len(faces)):
 #        if Faces.cellid[i][1] != -1:
 #            Cells.cellfid[Faces.cellid[i][1]].append(Faces.cellid[i][0])
@@ -250,14 +278,71 @@ def create_local_mesh(file):
             if ((Nodes.name[faces[i][0]] == 4 and Nodes.name[faces[i][1]] != 0) or
                     (Nodes.name[faces[i][0]] != 0 and Nodes.name[faces[i][1]] == 4)):
                 Faces.name[i] = 4
-        Faces.normal.append(normalvector(np.asarray(Nodes.vertex[faces[i][0]]),
+        normal, mesure = normalvector(np.asarray(Nodes.vertex[faces[i][0]]),
                                          np.asarray(Nodes.vertex[faces[i][1]]),
-                                         Cells.center[Faces.cellid[i][0]]))
+                                         Cells.center[Faces.cellid[i][0]])
+        Faces.normal.append(normal)
+        Faces.mesure.append(mesure)
         Faces.center.append([0.5 * (Nodes.vertex[faces[i][0]][0] + Nodes.vertex[faces[i][1]][0]),
                              0.5 * (Nodes.vertex[faces[i][0]][1] + Nodes.vertex[faces[i][1]][1])])
     for i in range(len(faces)):
         if Faces.name[i] != 0:
             Faces.bound += 1
+        
+    #compute the outgoing normal faces for each cell
+    for i in range(len(Cells.nodeid)):
+        ss = np.zeros((3, 2))
+
+        G = np.asarray(Cells.center[i])
+
+        for j in range(3):
+            f = Cells.faceid[i][j]
+            c = Faces.center[f]
+
+            if np.dot(G-c, Faces.normal[f]) < 0.0:
+                ss[j] = Faces.normal[f]
+            else:
+                ss[j] = -1.0*Faces.normal[f]
+                
+        Cells.nf.append(ss)
+
+    Faces.ghostcenter = [[] for i in range(len(Faces.name))]
+    Nodes.ghostcenter = [[] for i in range(len(Nodes.name))]
+        
+    #compute the ghostcenter for each face and each node
+    for i in range(len(Faces.name)):
+        nod1 = Faces.nodeid[i][1]
+        nod2 = Faces.nodeid[i][0]
+        if Faces.name[i] != 0 and Faces.name[i] != 10:
+            
+            x_1 = Nodes.vertex[nod1]
+            x_2 = Nodes.vertex[nod2]
+            
+            c_left = Faces.cellid[i][0]
+            v_1 = Cells.center[c_left]
+            gamma = ((v_1[0] - x_2[0])*(x_1[0]-x_2[0]) + (v_1[1]-x_2[1])*(x_1[1]-x_2[1]))/((x_1[0]-x_2[0])**2 + (x_1[1]-x_2[1])**2)
+           
+            kk = np.array([gamma * x_1[0] + (1 - gamma) * x_2[0], gamma * x_1[1] + (1 - gamma) * x_2[1]])
+            
+            v_2 = np.array([2 * kk[0] + ( -1 * v_1[0]), 2 * kk[1] + ( -1 * v_1[1])])
+            
+            Faces.ghostcenter[i] = v_2
+            Nodes.ghostcenter[nod1].append([v_2[0], v_2[1], i])
+            Nodes.ghostcenter[nod2].append([v_2[0], v_2[1], i])
+            
+        else:
+            Faces.ghostcenter[i] = [0,0]
+            #Nodes.ghostcenter[nod1].append([0,0])
+            #Nodes.ghostcenter[nod2].append([0,0])
+            
+    
+    for i in range(len(Nodes.name)):
+        if len(Nodes.ghostcenter[i]) == 0 :
+            Nodes.ghostcenter[i].append([0,0,0])
+            Nodes.ghostcenter[i].append([0,0,0])
+        elif len(Nodes.ghostcenter[i]) == 1 :
+            Nodes.ghostcenter[i].append([0,0,0])
+
 
 def create_halo_structure(file):
 
@@ -358,14 +443,15 @@ def create_halo_structure(file):
                 Nodes.halonid[i][j] = tmp[i][0][j]
 
     cells = Cells(np.asarray(Cells.nodeid), np.asarray(Cells.faceid), np.asarray(Cells.center),
-                  np.asarray(Cells.volume), Cells.father,
-                  Cells.son, Cells.iadiv, Cells.globalindex, np.asarray(Cells.cellfid))
+                  np.asarray(Cells.volume), Cells.father, Cells.son, Cells.iadiv, Cells.globalindex, 
+                  np.asarray(Cells.cellfid), np.asarray(Cells.cellnid), np.asarray(Cells.nf))
+    
     nodes = Nodes(np.asarray(Nodes.vertex), np.asarray(Nodes.name), np.asarray(Nodes.cellid),
-                  Nodes.globalindex, np.asarray(Nodes.halonid))
+                  Nodes.globalindex, np.asarray(Nodes.halonid), np.asarray(Nodes.ghostcenter))
 
     faces = Faces(np.asarray(Faces.nodeid), np.asarray(Faces.cellid), np.asarray(Faces.name),
-                  np.asarray(Faces.normal), np.asarray(Faces.center), Faces.bound,
-                  np.asarray(Faces.halofid))
+                  np.asarray(Faces.normal), np.asarray(Faces.mesure), np.asarray(Faces.center), 
+                  Faces.bound, np.asarray(Faces.halofid), np.asarray(Faces.ghostcenter))
 
     halos = Halo(np.asarray(Halo.halosint), np.asarray(Halo.halosext), np.asarray(Halo.centvol),
                  np.asarray(Halo.neigh), Halo.faces, Halo.nodes)
@@ -475,6 +561,8 @@ def clear_class(cells, nodes, faces):
     cells.iadiv = Dict()
     cells.globalindex = OrderedDict()
     cells.cellfid = []
+    cells.cellnid = []
+    cells.nf = []
 
     faces.nodeid = []
     faces.name = []
@@ -482,9 +570,11 @@ def clear_class(cells, nodes, faces):
     faces.normal = []
     faces.bound = 0
     faces.center = []
+    faces.ghostcenter = []
 
     nodes.cellid = []
     nodes.name = []
     nodes.vertex = []
     nodes.globalindex = OrderedDict()
     nodes.halonid = []
+    nodes.ghostcenter = []

@@ -19,8 +19,10 @@ from .localstructure import clear_class
 #from .utils import update_fluxes
 from .utils import *
 
-from .fvm import explicitscheme
+from .fvm import explicitscheme_convective
+from .fvm import explicitscheme_dissipative
 from .fvm import term_source_srnh
+from .fvm import term_coriolis
 from .fvm import term_source_vasquez
 from .fvm import compute_flux_fvc
 
