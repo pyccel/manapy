@@ -1156,103 +1156,103 @@ def explicitscheme_convective(w_c, w_x, w_y, w_ghost, w_halo, wx_halo, wy_halo, 
                 flx = compute_flux_shallow_srnh(flx, fleft, fright, w_l, w_r, norm, mesu, grav)
                 rezidus[cellidf[i][0]] = ddm.minus(rezidus[cellidf[i][0]], flx)
                 
-    elif order == 4:
-        U_x = w_x
-        U_y = w_y
-        
-        lim_x = np.zeros(len(w_c), dtype=mystruct)
-        lim_y = np.zeros(len(w_c), dtype=mystruct)
-        lim_x, lim_y = ddm.minmod(w_c, U_x, U_y, lim_x, lim_y, nodeidc, cellidn, mystruct)
-
-        for i in range(nbface):
-            w_l = w_c[cellidf[i][0]]
-            norm = normal[i]
-
-            if name[i] == 0:
-                w_r = w_c[cellidf[i][1]]
-
-                center_left = centerc[cellidf[i][0]]
-                center_right = centerc[cellidf[i][1]]
-
-                lim_x_left = lim_x[cellidf[i][0]]
-                lim_y_left = lim_y[cellidf[i][0]]
-                
-                lim_x_right = lim_x[cellidf[i][1]]
-                lim_y_right = lim_y[cellidf[i][1]]
-                
-                r_l = np.array([centerf[i][0] - center_left[0], centerf[i][1] - center_left[1]])
-                w_ln.h = w_l.h  + (lim_x_left.h  * r_l[0] + lim_y_left.h  * r_l[1])
-                w_ln.hu = w_l.hu + (lim_x_left.hu * r_l[0] + lim_y_left.hu * r_l[1])
-                w_ln.hv = w_l.hv + (lim_x_left.hv * r_l[0] + lim_y_left.hv * r_l[1])
-                w_ln.hc = w_l.hc + (lim_x_left.hc * r_l[0] + lim_y_left.hc * r_l[1])
-                w_ln.Z = w_l.Z  + (lim_x_left.Z  * r_l[0] + lim_y_left.Z  * r_l[1])
-
-                r_r = np.array([centerf[i][0] - center_right[0], centerf[i][1] - center_right[1]])
-                
-                w_rn.h = w_r.h  + (lim_x_right.h  * r_r[0] + lim_y_right.h  * r_r[1])
-                w_rn.hu = w_r.hu + (lim_x_right.hu * r_r[0] + lim_y_right.hu * r_r[1])
-                w_rn.hv = w_r.hv + (lim_x_right.hv * r_r[0] + lim_y_right.hv * r_r[1])
-                w_rn.hc = w_r.hc + (lim_x_right.hc * r_r[0] + lim_y_right.hc * r_r[1])
-                w_rn.Z = w_r.Z + (lim_x_right.Z  * r_r[0] + lim_y_right.Z  * r_r[1])
-
-                flx = compute_flux_shallow_srnh(flx, fleft, fright, w_ln, w_rn, norm, mesu, grav)
-
-                rezidus[cellidf[i][0]] = ddm.minus(rezidus[cellidf[i][0]], flx)
-                rezidus[cellidf[i][1]] = ddm.add(rezidus[cellidf[i][1]], flx)
-
-            elif name[i] == 10 and SIZE > 1:
-
-                w_l = w_c[cellidf[i][0]]
-                w_r = w_halo[halofid[i]]
-
-                center_left = centerc[cellidf[i][0]]
-                center_right = centerh[halofid[i]]
-
-                lim_x_left = lim_x[cellidf[i][0]]
-                lim_y_left = lim_x[cellidf[i][0]]
-
-                lim_x_right = lim_x[cellidf[i][0]]
-                lim_y_right = lim_x[cellidf[i][0]]
-
-                r_l = np.array([centerf[i][0] - center_left[0], centerf[i][1] - center_left[1]])
-                w_ln.h = w_l.h  + (lim_x_left.h  * r_l[0] + lim_y_left.h  * r_l[1])
-                w_ln.hu = w_l.hu + (lim_x_left.hu * r_l[0] + lim_y_left.hu * r_l[1])
-                w_ln.hv = w_l.hv + (lim_x_left.hv * r_l[0] + lim_y_left.hv * r_l[1])
-                w_ln.hc = w_l.hc + (lim_x_left.hc * r_l[0] + lim_y_left.hc * r_l[1])
-                w_ln.Z = w_l.Z  + (lim_x_left.Z  * r_l[0] + lim_y_left.Z  * r_l[1])
-
-
-                r_r = np.array([centerf[i][0] - centerh[halofid[i]][0],
-                                centerf[i][1] - centerh[halofid[i]][1]])
-                w_rn.h = w_r.h  + (lim_x_right.h  * r_r[0] + lim_y_right.h  * r_r[1])
-                w_rn.hu = w_r.hu + (lim_x_right.hu * r_r[0] + lim_y_right.hu * r_r[1])
-                w_rn.hv = w_r.hv + (lim_x_right.hv * r_r[0] + lim_y_right.hv * r_r[1])
-                w_rn.hc = w_r.hc + (lim_x_right.hc * r_r[0] + lim_y_right.hc * r_r[1])
-                w_rn.Z = w_r.Z + (lim_x_right.Z  * r_r[0] + lim_y_right.Z  * r_r[1])
-
-                flx = compute_flux_shallow_srnh(flx, fleft, fright, w_ln, w_rn, norm, mesu, grav)
-                rezidus[cellidf[i][0]] = ddm.minus(rezidus[cellidf[i][0]], flx)
-
-            else:
-                
-                w_l = w_c[cellidf[i][0]]
-                w_r = w_ghost[i]
-
-                center_left = centerc[cellidf[i][0]]
-                center_right = ghostcenterf[i]
-
-                lim_x_left = lim_x[cellidf[i][0]]
-                lim_y_left = lim_y[cellidf[i][0]]
-
-                r_l = np.array([centerf[i][0] - center_left[0], centerf[i][1] - center_left[1]])
-                w_ln.h = w_l.h  + (lim_x_left.h  * r_l[0] + lim_y_left.h  * r_l[1])
-                w_ln.hu = w_l.hu + (lim_x_left.hu * r_l[0] + lim_y_left.hu * r_l[1])
-                w_ln.hv = w_l.hv + (lim_x_left.hv * r_l[0] + lim_y_left.hv * r_l[1])
-                w_ln.hc = w_l.hc + (lim_x_left.hc * r_l[0] + lim_y_left.hc * r_l[1])
-                w_ln.Z = w_l.Z + (lim_x_left.Z  * r_l[0] + lim_y_left.Z  * r_l[1])
-
-                flx = compute_flux_shallow_srnh(flx, fleft, fright, w_ln, w_r, norm, mesu, grav)
-                rezidus[cellidf[i][0]] = ddm.minus(rezidus[cellidf[i][0]], flx)
+#    elif order == 4:
+#        U_x = w_x
+#        U_y = w_y
+#        
+#        lim_x = np.zeros(len(w_c), dtype=mystruct)
+#        lim_y = np.zeros(len(w_c), dtype=mystruct)
+#        lim_x, lim_y = ddm.minmod(w_c, U_x, U_y, lim_x, lim_y, nodeidc, cellidn, mystruct)
+#
+#        for i in range(nbface):
+#            w_l = w_c[cellidf[i][0]]
+#            norm = normal[i]
+#
+#            if name[i] == 0:
+#                w_r = w_c[cellidf[i][1]]
+#
+#                center_left = centerc[cellidf[i][0]]
+#                center_right = centerc[cellidf[i][1]]
+#
+#                lim_x_left = lim_x[cellidf[i][0]]
+#                lim_y_left = lim_y[cellidf[i][0]]
+#                
+#                lim_x_right = lim_x[cellidf[i][1]]
+#                lim_y_right = lim_y[cellidf[i][1]]
+#                
+#                r_l = np.array([centerf[i][0] - center_left[0], centerf[i][1] - center_left[1]])
+#                w_ln.h = w_l.h  + (lim_x_left.h  * r_l[0] + lim_y_left.h  * r_l[1])
+#                w_ln.hu = w_l.hu + (lim_x_left.hu * r_l[0] + lim_y_left.hu * r_l[1])
+#                w_ln.hv = w_l.hv + (lim_x_left.hv * r_l[0] + lim_y_left.hv * r_l[1])
+#                w_ln.hc = w_l.hc + (lim_x_left.hc * r_l[0] + lim_y_left.hc * r_l[1])
+#                w_ln.Z = w_l.Z  + (lim_x_left.Z  * r_l[0] + lim_y_left.Z  * r_l[1])
+#
+#                r_r = np.array([centerf[i][0] - center_right[0], centerf[i][1] - center_right[1]])
+#                
+#                w_rn.h = w_r.h  + (lim_x_right.h  * r_r[0] + lim_y_right.h  * r_r[1])
+#                w_rn.hu = w_r.hu + (lim_x_right.hu * r_r[0] + lim_y_right.hu * r_r[1])
+#                w_rn.hv = w_r.hv + (lim_x_right.hv * r_r[0] + lim_y_right.hv * r_r[1])
+#                w_rn.hc = w_r.hc + (lim_x_right.hc * r_r[0] + lim_y_right.hc * r_r[1])
+#                w_rn.Z = w_r.Z + (lim_x_right.Z  * r_r[0] + lim_y_right.Z  * r_r[1])
+#
+#                flx = compute_flux_shallow_srnh(flx, fleft, fright, w_ln, w_rn, norm, mesu, grav)
+#
+#                rezidus[cellidf[i][0]] = ddm.minus(rezidus[cellidf[i][0]], flx)
+#                rezidus[cellidf[i][1]] = ddm.add(rezidus[cellidf[i][1]], flx)
+#
+#            elif name[i] == 10 and SIZE > 1:
+#
+#                w_l = w_c[cellidf[i][0]]
+#                w_r = w_halo[halofid[i]]
+#
+#                center_left = centerc[cellidf[i][0]]
+#                center_right = centerh[halofid[i]]
+#
+#                lim_x_left = lim_x[cellidf[i][0]]
+#                lim_y_left = lim_x[cellidf[i][0]]
+#
+#                lim_x_right = lim_x[cellidf[i][0]]
+#                lim_y_right = lim_x[cellidf[i][0]]
+#
+#                r_l = np.array([centerf[i][0] - center_left[0], centerf[i][1] - center_left[1]])
+#                w_ln.h = w_l.h  + (lim_x_left.h  * r_l[0] + lim_y_left.h  * r_l[1])
+#                w_ln.hu = w_l.hu + (lim_x_left.hu * r_l[0] + lim_y_left.hu * r_l[1])
+#                w_ln.hv = w_l.hv + (lim_x_left.hv * r_l[0] + lim_y_left.hv * r_l[1])
+#                w_ln.hc = w_l.hc + (lim_x_left.hc * r_l[0] + lim_y_left.hc * r_l[1])
+#                w_ln.Z = w_l.Z  + (lim_x_left.Z  * r_l[0] + lim_y_left.Z  * r_l[1])
+#
+#
+#                r_r = np.array([centerf[i][0] - centerh[halofid[i]][0],
+#                                centerf[i][1] - centerh[halofid[i]][1]])
+#                w_rn.h = w_r.h  + (lim_x_right.h  * r_r[0] + lim_y_right.h  * r_r[1])
+#                w_rn.hu = w_r.hu + (lim_x_right.hu * r_r[0] + lim_y_right.hu * r_r[1])
+#                w_rn.hv = w_r.hv + (lim_x_right.hv * r_r[0] + lim_y_right.hv * r_r[1])
+#                w_rn.hc = w_r.hc + (lim_x_right.hc * r_r[0] + lim_y_right.hc * r_r[1])
+#                w_rn.Z = w_r.Z + (lim_x_right.Z  * r_r[0] + lim_y_right.Z  * r_r[1])
+#
+#                flx = compute_flux_shallow_srnh(flx, fleft, fright, w_ln, w_rn, norm, mesu, grav)
+#                rezidus[cellidf[i][0]] = ddm.minus(rezidus[cellidf[i][0]], flx)
+#
+#            else:
+#                
+#                w_l = w_c[cellidf[i][0]]
+#                w_r = w_ghost[i]
+#
+#                center_left = centerc[cellidf[i][0]]
+#                center_right = ghostcenterf[i]
+#
+#                lim_x_left = lim_x[cellidf[i][0]]
+#                lim_y_left = lim_y[cellidf[i][0]]
+#
+#                r_l = np.array([centerf[i][0] - center_left[0], centerf[i][1] - center_left[1]])
+#                w_ln.h = w_l.h  + (lim_x_left.h  * r_l[0] + lim_y_left.h  * r_l[1])
+#                w_ln.hu = w_l.hu + (lim_x_left.hu * r_l[0] + lim_y_left.hu * r_l[1])
+#                w_ln.hv = w_l.hv + (lim_x_left.hv * r_l[0] + lim_y_left.hv * r_l[1])
+#                w_ln.hc = w_l.hc + (lim_x_left.hc * r_l[0] + lim_y_left.hc * r_l[1])
+#                w_ln.Z = w_l.Z + (lim_x_left.Z  * r_l[0] + lim_y_left.Z  * r_l[1])
+#
+#                flx = compute_flux_shallow_srnh(flx, fleft, fright, w_ln, w_r, norm, mesu, grav)
+#                rezidus[cellidf[i][0]] = ddm.minus(rezidus[cellidf[i][0]], flx)
 
     return rezidus
 
