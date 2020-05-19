@@ -442,10 +442,10 @@ def compute_flux_shallow_srnh(flux, fleft, fright, w_l, w_r, normal, mesure, gra
 
     epsilon = 1e-4
 
-    if wn_l.h < 0:
-        wn_l.h = np.fabs(wn_l.h)
-    if wr_l.h < 0:
-        wr_l.h = np.fabs(wr_l.h)
+#    if wn_l.h < 0:
+#        wn_l.h = np.fabs(wn_l.h)
+#    if wr_l.h < 0:
+#        wr_l.h = np.fabs(wr_l.h)
 
 
     ninv = np.zeros(2)

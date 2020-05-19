@@ -97,7 +97,7 @@ def test_swep():
     tfinal = 0.6
     order = 1#(1:first order, 2:barth jeperson 3:van albada 4:minmod)
     term_convec = "on"
-    term_source = "off"
+    term_source = "on"
     term_coriolis = "off"
     term_dissipative = "off"
     grav = 9.81
