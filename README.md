@@ -1,5 +1,4 @@
-[![Build Status](https://travis-ci.org/pyccel/manapy.svg?branch=master)](https://travis-ci.org/pyccel/manapy)
-
+[![Build Status](https://travis-ci.org/imadki/manapy.svg?branch=manapy_hpc)](https://travis-ci.org/imad/manapy)
 # manapy
 Coming soon
 
