@@ -71,7 +71,7 @@ install_requires = [
     'termcolor==1.1.0',
     'textX==2.3.0',
     'mgmetis==0.1.1',
-    'pymumps==0.3.2'
+    #'pymumps==0.3.2'
     ]
 
 def setup_package():
