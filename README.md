@@ -18,11 +18,11 @@ pyccelize functions
 ./run_pyccel.sh
 ```
 
-# Using Mumps solver
+To use Mumps solver
 
 sudo apt install libmumps-ptscotch-5.2.1
 
-# Using petsc4py solver
+To use petsc4py solver
 
 https://petsc.org/release/install/
 
