@@ -1,0 +1,25 @@
+name: Manapy tests
+
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  Linux:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install dependencies
+        uses: ./.github/actions/linux_install_action
+      - name: Install python dependencies
+        uses: ./.github/actions/pip_install_action
+      - name: test manapy with serial test
+        uses: ./.github/actions/pytest_action
+#      - name: test manapy with parallel test
+#        uses: ./.github/actions/pytest_parallel

@@ -1,0 +1,10 @@
+name: 'manapy pytest'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Test with pytest
+      run:
+        pytest 
+      shell: bash
+      working-directory: ./tests

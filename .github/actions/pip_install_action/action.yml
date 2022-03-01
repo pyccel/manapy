@@ -1,0 +1,25 @@
+name: 'pip packages for testing'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Update pip
+      shell: bash
+      run:
+        python -m pip install --upgrade pip
+    - name: Install wheel
+      shell: bash
+      run:
+        python -m pip install wheel
+    - name: Install Cython
+      shell: bash
+      run:
+        python -m pip install Cython
+    - name: Install manapy 
+      shell: bash
+      run:
+        python -m pip install .
+    - name: Install pytest
+      shell: bash
+      run:
+        python -m pip install pytest

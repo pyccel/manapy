@@ -1,0 +1,11 @@
+name: 'Manapy pytest commands running parallel tests'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Test with pytest
+      run: |
+        mpiexec -n 4 ${MPI_OPTS} python -m pytest ./test_poisson_2d.py -v -m parallel -rx
+      shell: bash
+      working-directory: ./tests
+

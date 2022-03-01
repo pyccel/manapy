@@ -1,0 +1,22 @@
+name: 'Linux installation'
+
+runs:
+  using: "composite"
+  steps:
+    - name: update the package list
+      run:
+        sudo apt-get update
+      shell: bash
+    - name: Install gfortran
+      run:
+        sudo apt-get install gfortran
+      shell: bash
+    - name: Install MPI
+      run: |
+        sudo apt-get install libopenmpi-dev openmpi-bin
+        echo "MPI_OPTS=--oversubscribe" >> $GITHUB_ENV
+      shell: bash
+    - name: Install OpenMP
+      run:
+        sudo apt-get install libomp-dev libomp5 libmumps-ptscotch-dev
+      shell: bash
