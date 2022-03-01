@@ -20,7 +20,9 @@ pyccelize functions
 
 To use Mumps solver
 
+```sh
 sudo apt install libmumps-ptscotch-5.2.1
+```
 
 To use petsc4py solver
 
