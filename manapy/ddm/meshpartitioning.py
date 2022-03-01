@@ -1,343 +1,355 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Mar 22 16:08:27 2021
+
+@author: kissami
+"""
+
 # coding: utf-8
 import os
-import timeit
-from collections import OrderedDict
 import meshio
 import numpy as np
+
+
+__all__ = ['readmesh']
+from collections import OrderedDict
 from mgmetis import metis
+from mgmetis.enums import OPTION
+from manapy.ddm.numba_ddm import create_npart_cpart, unique_func, det_vec_3d
 
-__all__ = ['meshpart']
-
-def meshpart(size, filename):
-    if size > 1:
-        paramesh(size, filename)
+def readmesh(filename, dim, periodic=[0,0,0], comm = None):
+    
+    if comm is None:
+        from mpi4py import MPI
+        
+        comm = MPI.COMM_WORLD
+        SIZE = comm.Get_size()
+        RANK = comm.Get_rank()
     else:
-        seqmesh(filename)
+        SIZE = comm.Get_size()
+        RANK = comm.Get_rank()
+    
+    if RANK == 0:
+        
+        #removing existing vtk files
+        mypath = "results"
+        if not os.path.exists(mypath):
+            os.mkdir(mypath)
+        for root, dirs, files in os.walk(mypath):
+            for file in files:
+                os.remove(os.path.join(root, file))
 
-def seqmesh(filename):
+        if dim == 2 :
+            typeOfCells = "triangle"
+            typeOfFaces = "line"
+        else:
+            typeOfCells = "tetra"
+            typeOfFaces = "triangle"
+    
+        def load_gmsh_mesh(filename):
+            #mesh = meshio.gmsh.read(filename)
+            mesh = meshio.read(filename)
+            return mesh
+    
+        def create_cell_nodeid(mesh):
+            cell_nodeid = []
+            
+            if type(mesh.cells) == dict:
+                cell_nodeid = mesh.cells[typeOfCells]
+    
+            elif type(mesh.cells) == list:
+                cell_nodeid = mesh.cells[1].data
+    
+            for i in range(len(cell_nodeid)):
+                cell_nodeid[i].sort()
+                
+            return cell_nodeid
+    
+        def define_ghost_node(mesh, nodes):
+            ghost_nodes = [0]*len(nodes)
+    
+            if type(mesh.cells) == dict:
+                for i, j in mesh.cell_data.items():
+                    if i == typeOfFaces:
+                        ghost = j.get('gmsh:physical')
+    
+                for i, j in mesh.cells.items():
+                    if i == typeOfFaces:
+                        for k in range(len(j)):
+                            for index in range(dim):
+                                if ghost[k] == 1 or ghost[k] == 2 :#or ghost[k] == 5 or ghost[k] == 6 :
+                                    ghost_nodes[j[k][index]] = int(ghost[k])
+                                    
+                    if i == typeOfFaces:
+                        for k in range(len(j)):
+                            for index in range(dim):
+                                if ghost_nodes[j[k][index]] != 1 and ghost_nodes[j[k][index]] !=2:
+                                    if ghost[k] == 3 or ghost[k] == 4 :#or ghost[k] == 5 or ghost[k] == 6 :
+                                        ghost_nodes[j[k][index]] = int(ghost[k])
+                    
+                
+                for i, j in mesh.cells.items():
+                    if i == typeOfFaces:
+                        for k in range(len(j)):
+                            for index in range(dim):
+                                if ghost_nodes[j[k][index]] == 0:
+                                    ghost_nodes[j[k][index]] = int(ghost[k])
+    
+            elif type(mesh.cells) == list:
+                ghost = mesh.cell_data['gmsh:physical'][0]
+                for i in range(len(mesh.cells[0].data)):
+                    for j in range(dim):
+                        if ghost[k] == 1 or ghost[k] == 2 :#or ghost[k] == 5 or ghost[k] == 6 :
+                            ghost_nodes[mesh.cells[0].data[i][j]] = int(ghost[i])
+    
+                for i in range(len(mesh.cells[0].data)):
+                    for j in range(dim):
+                        if ghost_nodes[j[k][index]] == 0:
+                            ghost_nodes[mesh.cells[0].data[i][j]] = int(ghost[i])
+                            
+            if periodic[0] == 1:
+                for i in range(len(ghost_nodes)):
+                    if ghost_nodes[i] == 1:
+                        ghost_nodes[i] = 11
+                    elif ghost_nodes[i] == 2:
+                        ghost_nodes[i] = 22
+                        
+            if periodic[1] == 1:
+                for i in range(len(ghost_nodes)):
+                    if ghost_nodes[i] == 3:
+                        ghost_nodes[i] = 33
+                    elif ghost_nodes[i] == 4:
+                        ghost_nodes[i] = 44
+                        
+            if periodic[2] == 1:
+                for i in range(len(ghost_nodes)):
+                    if ghost_nodes[i] == 5:
+                        ghost_nodes[i] = 55
+                    elif ghost_nodes[i] == 6:
+                        ghost_nodes[i] = 66
+    
+            return ghost_nodes
+    
+        def create_nodes(mesh):
+            nodes = []
+            nodes = mesh.points
+            return nodes
+        print("Starting ....")
+    
+        #load mesh
+        mesh = load_gmsh_mesh(filename)
+        #coordinates x, y of each node
+        nodes = create_nodes(mesh)
+        #nodes of each cell
+        cell_nodeid = create_cell_nodeid(mesh)
+    
+        ghost_nodes = define_ghost_node(mesh, nodes)
+        
+        nbelements = len(cell_nodeid)
+        nbnodes = len(nodes)
 
-    def load_gmsh_mesh(filename):
-        #mesh = meshio.gmsh.read(filename)
-        mesh = meshio.read(filename)
-        return mesh
-
-    def create_cell_nodeid(mesh):
-        cell_nodeid = []
-
-        if type(mesh.cells) == dict:
-            cell_nodeid = mesh.cells["triangle"]
-        elif type(mesh.cells) == list:
-            cell_nodeid = mesh.cells[1].data
-
-        for i in range(len(cell_nodeid)):
-            cell_nodeid[i].sort()
-
-        return cell_nodeid
-
-    def define_ghost_node(mesh, nodes):
-        ghost_nodes = [0]*len(nodes)
-
-        if type(mesh.cells) == dict:
-            for i, j in mesh.cell_data.items():
-                if i == "line":
-                    ghost = j.get('gmsh:physical')
-
-            for i, j in mesh.cells.items():
-                if i == "line":
-                    for k in range(len(j)):
-                        for index in range(2):
-                            if ghost[k] > 2:
-                                ghost_nodes[j[k][index]] = int(ghost[k])
-            for i, j in mesh.cells.items():
-                if i == "line":
-                    for k in range(len(j)):
-                        for index in range(2):
-                            if ghost[k] <= 2:
-                                ghost_nodes[j[k][index]] = int(ghost[k])
-
-        elif type(mesh.cells) == list:
-            ghost = mesh.cell_data['gmsh:physical'][0]
-            for i in range(len(mesh.cells[0].data)):
-                for j in range(2):
-                    if ghost[i] > 2:
-                        ghost_nodes[mesh.cells[0].data[i][j]] = int(ghost[i])
-
-            for i in range(len(mesh.cells[0].data)):
-                for j in range(2):
-                    if ghost[i] <= 2:
-                        ghost_nodes[mesh.cells[0].data[i][j]] = int(ghost[i])
-
-        return ghost_nodes
-
-    def create_nodes(mesh):
-        nodes = []
-        nodes = mesh.points
-        return nodes
-
-    start = timeit.default_timer()
-
-    #load mesh
-    mesh = load_gmsh_mesh(filename)
-    #coordinates x, y of each node
-    nodes = create_nodes(mesh)
-    #nodes of each cell
-    cell_nodeid = create_cell_nodeid(mesh)
-
-    ghost_nodes = define_ghost_node(mesh, nodes)
-
-    if os.path.exists("mesh"+str(0)+".txt"):
-        os.remove("mesh"+str(0)+".txt")
-
-    with open("mesh"+str(0)+".txt", "a") as text_file:
-        text_file.write("elements\n")
-        np.savetxt(text_file, cell_nodeid, fmt='%u')
-        text_file.write("endelements\n")
-
-
-    with open("mesh"+str(0)+".txt", "a") as text_file:
-        text_file.write("nodes\n")
-        for i in range(len(nodes)):
-            for j in range(3):
-                text_file.write(str(nodes[i][j])+str(" "))
-            text_file.write(str(ghost_nodes[i]))
-            text_file.write("\n")
-        text_file.write("endnodes\n")
-
-    stop = timeit.default_timer()
-
-    print('Global Execution Time: ', stop - start)
-
-def paramesh(size, filename):
-
-    def load_gmsh_mesh(filename):
-        mesh = meshio.read(filename)
-        return mesh
-
-    def create_cell_nodeid(mesh):
-        cell_nodeid = []
-
-        if type(mesh.cells) == dict:
-            cell_nodeid = mesh.cells["triangle"]
-        elif type(mesh.cells) == list:
-            cell_nodeid = mesh.cells[1].data
-
-        for i in range(len(cell_nodeid)):
-            cell_nodeid[i].sort()
-
-        return cell_nodeid
-
-    def define_ghost_node(mesh, nodes):
-        ghost_nodes = [0]*len(nodes)
-
-        if type(mesh.cells) == dict:
-            for i, j in mesh.cell_data.items():
-                if i == "line":
-                    ghost = j.get('gmsh:physical')
-
-            for i, j in mesh.cells.items():
-                if i == "line":
-                    for k in range(len(j)):
-                        for index in range(2):
-                            if ghost[k] > 2:
-                                ghost_nodes[j[k][index]] = int(ghost[k])
-            for i, j in mesh.cells.items():
-                if i == "line":
-                    for k in range(len(j)):
-                        for index in range(2):
-                            if ghost[k] <= 2:
-                                ghost_nodes[j[k][index]] = int(ghost[k])
-
-        elif type(mesh.cells) == list:
-            ghost = mesh.cell_data['gmsh:physical'][0]
-            for i in range(len(mesh.cells[0].data)):
-                for j in range(2):
-                    if ghost[i] > 2:
-                        ghost_nodes[mesh.cells[0].data[i][j]] = int(ghost[i])
-
-            for i in range(len(mesh.cells[0].data)):
-                for j in range(2):
-                    if ghost[i] <= 2:
-                        ghost_nodes[mesh.cells[0].data[i][j]] = int(ghost[i])
-
-        return ghost_nodes
-
-    start = timeit.default_timer()
-
-    #load mesh
-    mesh = load_gmsh_mesh(filename)
-
-    #coordinates x, y of each node
-    nodes = mesh.points#create_nodes(mesh.points)
-    #nodes of each cell
-    cell_nodeid = create_cell_nodeid(mesh)
-
-    cell_nodeiddict = {tuple(cell_nodeid[0]): 0}
-    for i in range(1, len(cell_nodeid)):
-        cell_nodeiddict[tuple(cell_nodeid[i])] = i
-
-    #ghost nodes
-    ghost_nodes = define_ghost_node(mesh, nodes)
-
-    stopmesh = timeit.default_timer()
-    print("Reading mesh", stopmesh-start)
-
-    nbelements = len(cell_nodeid)
-    nbnodes = len(nodes)
-
-    print("Number of Cells : ", nbelements)
-    print("Number of Nodes : ", nbnodes)
-
-    #Partitioning mesh
-    if size > 1:
-        objval, epart, npart = metis.part_mesh_dual(size, cell_nodeid)
-
-    stopmetis = timeit.default_timer()
-    print("METIS partitionning in ", size, "partitions", stopmetis - stopmesh)
-
-    node_parts = OrderedDict()
-    cell_parts = OrderedDict()
-    node_part = [[]  for i in range(size)]
-    cell_part = [[]  for i in range(size)]
-
-    globnodetoloc = OrderedDict()
-    locnodetoglob = OrderedDict()
-    globcelltoloc = OrderedDict()
-
-    neighsub = [[]  for i in range(size)]
-    halo_cellid = [[]  for i in range(size)]
-    npart = [[] for i in range(nbnodes)]
-    cpart = [[] for i in range(nbelements)]
-
-    for i in range(nbelements):
-        for j in range(3):
-            if epart[i] not in npart[cell_nodeid[i][j]]:
-                npart[cell_nodeid[i][j]].append(epart[i])
-
-    for i in range(nbelements):
-        for j in range(3):
-            for k in range(len(npart[cell_nodeid[i][j]])):
-                if npart[cell_nodeid[i][j]][k] not in cpart[i]:
-                    cpart[i].append(npart[cell_nodeid[i][j]][k])
-        cpart[i].sort()
-
-    #Create dict of nodes/cells for each partition
-    for i in range(nbelements):
-        for j in range(3):
-            k = cell_nodeid[i][j]
-            node_parts[epart[i], k] = [nodes[k][0], nodes[k][1], nodes[k][2], ghost_nodes[k]]
-            cell_parts[epart[i], i] = cell_nodeid[i]
-
-    #Create list of nodes/cells for each partition and local to global indexation
-    for i, j in node_parts.items():
-        node_part[i[0]].append(j)
-        globnodetoloc[i[0], i[1]] = len(node_part[i[0]])-1
-        locnodetoglob[i[0], len(node_part[i[0]])-1] = i[1]
-        if len(npart[i[1]]) > 1:
-            for index in range(len(npart[i[1]])):
-                if (npart[i[1]][index] not in neighsub[i[0]] and npart[i[1]][index] != i[0]):
-                    neighsub[i[0]].append(npart[i[1]][index])
-                    neighsub[i[0]].sort()
-
-    for i, j in cell_parts.items():
-        cell_part[i[0]].append(j)
-        globcelltoloc[i[0], len(cell_part[i[0]])-1] = i[1]
-        #globcelltoloc[i[0],i[1]] = len(cell_part[i[0]])
-
-    stopstruc = timeit.default_timer()
-    print("Create local structure for each proc", stopstruc - stopmetis)
-
-    for i in range(size):
-        for j in cell_part[i]:
-            if (len(npart[j[0]]) + len(npart[j[1]]) + len(npart[j[2]])) > 3:
-                halo_cellid[i].append(j)
-
-    haloint = OrderedDict()
-    haloext = OrderedDict()
-    for i in range(size):
-        for j in halo_cellid[i]:
-            cell = cell_nodeiddict.get(tuple(j))
-            for k in range(len(cpart[cell])):
-                if i != cpart[cell][k]:
-                    haloint.setdefault((i, cpart[cell][k]), []).append(cell)
-                    haloext.setdefault((cpart[cell][k], i), []).append(cell)
-
-    for i in range(size):
-        for j in range(len(cell_part[i])):
-            cell_part[i][j] = [globnodetoloc[i, cell_part[i][j][0]],
-                               globnodetoloc[i, cell_part[i][j][1]],
-                               globnodetoloc[i, cell_part[i][j][2]]]
-
-    stophalo = timeit.default_timer()
-    print("Creating halo structure", stophalo - stopstruc)
-
-    centvol = [[] for i in range(size)]
-    for i in range(size):
-        for j in range(len(neighsub[i])):
-            for k in range(len(haloext[(i, neighsub[i][j])])):
-                s_1 = cell_nodeid[haloext[(i, neighsub[i][j])][k]][0]
-                s_2 = cell_nodeid[haloext[(i, neighsub[i][j])][k]][1]
-                s_3 = cell_nodeid[haloext[(i, neighsub[i][j])][k]][2]
-
-                x_1 = nodes[s_1][0]
-                y_1 = nodes[s_1][1]
-                x_2 = nodes[s_2][0]
-                y_2 = nodes[s_2][1]
-                x_3 = nodes[s_3][0]
-                y_3 = nodes[s_3][1]
-
-                centvol[i].append([1./3 * (x_1 + x_2 + x_3), 1./3*(y_1 + y_2 + y_3),
-                                   (1./2) * abs((x_1-x_2)*(y_1-y_3)-(x_1-x_3)*(y_1-y_2))])
-
-    for i in range(size):
-        if os.path.exists("mesh"+str(i)+".txt"):
-            os.remove("mesh"+str(i)+".txt")
-
-    for i in range(size):
-        with open("mesh"+str(i)+".txt", "a") as text_file:
-            text_file.write("elements\n")
-            np.savetxt(text_file, cell_part[i], fmt='%u')
-            text_file.write("endelements\n")
-            text_file.write("nodes\n")
-            np.savetxt(text_file, node_part[i])
-            text_file.write("endnodes\n")
-            text_file.write("halosint\n")
-            for j in range(len(neighsub[i])):
-                for k in range(len(haloint[(i, neighsub[i][j])])):
-                    text_file.write(str(haloint[(i, neighsub[i][j])][k]))
+        print("Number of Cells : ", nbelements)
+        print("Number of Nodes : ", nbnodes)
+    
+        MESH_DIR = "meshes"+str(SIZE)+"PROC"
+        if not os.path.exists(MESH_DIR):
+            os.mkdir(MESH_DIR)
+    
+        if SIZE == 1:
+            for i in range(SIZE):
+                # THe mesh file
+                filename = os.path.join(MESH_DIR, "mesh"+str(i)+".txt")
+                if os.path.exists(filename):
+                    os.remove(filename)
+            
+                if os.path.exists(filename):
+                    os.remove(filename)
+        
+            with open(filename, "a") as text_file:
+                text_file.write("elements\n")
+                np.savetxt(text_file, cell_nodeid, fmt='%u')
+                text_file.write("endelements\n")
+                text_file.write("nodes\n")
+                for i in range(len(nodes)):
+                    for j in range(3):
+                        text_file.write(str(nodes[i][j])+str(" "))
+                    text_file.write(str(ghost_nodes[i]))
                     text_file.write("\n")
-            text_file.write("endhalosint\n")
-            text_file.write("halosext\n")
-            for j in range(len(neighsub[i])):
-                for k in range(len(haloext[(i, neighsub[i][j])])):
-                    text_file.write(str(cell_nodeid[haloext[(i, neighsub[i][j])][k]][0])+" "+
-                                    str(cell_nodeid[haloext[(i, neighsub[i][j])][k]][1])+" "+
-                                    str(cell_nodeid[haloext[(i, neighsub[i][j])][k]][2]))
+                text_file.write("endnodes\n")
+        
+        else :
+            #Partitioning mesh
+            opts = metis.get_default_options()
+            opts[OPTION.MINCONN] = 1
+            opts[OPTION.CONTIG] = 1
+            options = opts
+	
+            objval, epart, npart = metis.part_mesh_dual(SIZE, cell_nodeid, opts=options, nv=len(mesh.points))
+	        
+    
+            globnodetoloc = OrderedDict()
+            locnodetoglob = OrderedDict()
+            globcelltoloc = OrderedDict()
+            
+            #TODO improve function 
+            npart, cpart, neighsub, node_part, cell_part, halo_cellid = create_npart_cpart(cell_nodeid, npart, epart, 
+                                                                                           nbnodes, nbelements, SIZE, dim)
+            
+            
+            for i in range(SIZE): 
+                neighsub[i]  = np.unique(neighsub[i])
+                cell_part[i] = np.unique(cell_part[i])
+                neighsub[i]  = neighsub[i][neighsub[i]!=i]
+                node_part[i] = unique_func(node_part[i])
+                halo_cellid[i]  = np.unique(halo_cellid[i])
+                
+            for i in range(SIZE):
+                for j in range(len(cell_part[i])):
+                    globcelltoloc[i, j] = cell_part[i][j]
+                for j in range(len(node_part[i])):
+                    globnodetoloc[i, node_part[i][j]] = j
+                    locnodetoglob[i, j] = node_part[i][j]
+            
+            cmpt = 0
+            tc = np.zeros(nbelements, dtype=np.int32)
+            for i in range(SIZE):
+                for j in range(len(cell_part[i])):
+                    tc[cmpt] = cell_part[i][j]
+                    cmpt += 1
+            
+            haloint = OrderedDict()
+            haloext = OrderedDict()
+            for i in range(SIZE):
+                for cell in halo_cellid[i]:
+                    for k in range(len(cpart[cell])):
+                        if i != cpart[cell][k]:
+                            haloint.setdefault((i, cpart[cell][k]), []).append(cell)
+                            haloext.setdefault((cpart[cell][k], i), []).append(cell)
+            
+            
+            centvol = [[] for i in range(SIZE)]
+            if dim == 2:
+                for i in range(SIZE):
+                    for j in range(len(neighsub[i])):
+                        for k in range(len(haloext[(i, neighsub[i][j])])):
+                            s_1 = cell_nodeid[haloext[(i, neighsub[i][j])][k]][0]
+                            s_2 = cell_nodeid[haloext[(i, neighsub[i][j])][k]][1]
+                            s_3 = cell_nodeid[haloext[(i, neighsub[i][j])][k]][2]
+                
+                            x_1 = nodes[s_1][0]
+                            y_1 = nodes[s_1][1]
+                            x_2 = nodes[s_2][0]
+                            y_2 = nodes[s_2][1]
+                            x_3 = nodes[s_3][0]
+                            y_3 = nodes[s_3][1]
+                
+                            centvol[i].append([1./3 * (x_1 + x_2 + x_3), 1./3*(y_1 + y_2 + y_3), 0.,
+                                               (1./2) * abs((x_1-x_2)*(y_1-y_3)-(x_1-x_3)*(y_1-y_2))])
+        
+            if dim == 3:
+                for i in range(SIZE):
+                    for j in range(len(neighsub[i])):
+                        for k in range(len(haloext[(i, neighsub[i][j])])):
+                            
+                            s_1 = cell_nodeid[haloext[(i, neighsub[i][j])][k]][0]
+                            s_2 = cell_nodeid[haloext[(i, neighsub[i][j])][k]][1]
+                            s_3 = cell_nodeid[haloext[(i, neighsub[i][j])][k]][2]
+                            s_4 = cell_nodeid[haloext[(i, neighsub[i][j])][k]][3]
+                            
+                            a = np.asarray(nodes[s_1])
+                            b = np.asarray(nodes[s_2])
+                            c = np.asarray(nodes[s_3])
+                            d = np.asarray(nodes[s_4])
+                
+                            x_1 = nodes[s_1][0]; y_1 = nodes[s_1][1]; z_1 = nodes[s_1][2]
+                            x_2 = nodes[s_2][0]; y_2 = nodes[s_2][1]; z_2 = nodes[s_2][2] 
+                            x_3 = nodes[s_3][0]; y_3 = nodes[s_3][1]; z_3 = nodes[s_3][2] 
+                            x_4 = nodes[s_4][0]; y_4 = nodes[s_4][1]; z_4 = nodes[s_4][2]
+                
+                            centvol[i].append([1./4 * (x_1 + x_2 + x_3 + x_4), 1./4*(y_1 + y_2 + y_3 + y_4), 
+                                               1./4*(z_1 + z_2 + z_3 + z_4), 
+                                               1./6*np.fabs(det_vec_3d(b-a, c-a, d-a))])
+            
+            for i in range(SIZE):
+                # THe mesh file
+                filename = os.path.join(MESH_DIR, "mesh"+str(i)+".txt")
+                file = os.path.join(MESH_DIR, "mesh_master.txt")
+                
+                if os.path.exists(filename):
+                    os.remove(filename)
+                if os.path.exists(file):
+                    os.remove(file)
+    
+            filename = os.path.join(MESH_DIR, "mesh0.txt")
+            with open(filename, "a") as text_file:
+                text_file.write("GtoL\n")
+                for i in range(len(tc)):
+                    text_file.write(str(tc[i]))
                     text_file.write("\n")
-            text_file.write("endhalosext\n")
-            text_file.write("centvol\n")
-            np.savetxt(text_file, centvol[i])
-            text_file.write("endcentvol\n")
-            text_file.write("globalcelltolocal\n")
-            for j in range(len(cell_part[i])):
-                text_file.write(str(globcelltoloc[i, j]))
-                text_file.write("\n")
-            text_file.write("endglobalcelltolocal\n")
-            text_file.write("localnodetoglobal\n")
-            for j in range(len(node_part[i])):
-                text_file.write(str(locnodetoglob[i, j]))
-                text_file.write("\n")
-            text_file.write("endlocalnodetoglobal\n")
-            text_file.write("neigh\n")
-            for j in range(len(neighsub[i])):
-                text_file.write(str(neighsub[i][j])+ " ")
-            text_file.write("\n")
-            for j in neighsub[i]:
-                text_file.write(str(len(haloint[(i, j)]))+ " ")
-            text_file.write("\n")
-            text_file.write("endneigh\n")
-
-    stopfile = timeit.default_timer()
-    print("save structures in files", stopfile - stophalo)
-
-    stop = timeit.default_timer()
-    print('Global Execution Time: ', stop - start)
+                text_file.write("endGtoL\n")
+    
+            for i in range(SIZE):
+                filename = os.path.join(MESH_DIR, "mesh"+str(i)+".txt")
+                with open(filename, "a") as text_file:
+                    text_file.write("elements\n")
+                    for j in range(len(cell_part[i])):
+                        for k in range(dim+1):
+                            text_file.write(str(globnodetoloc[i, cell_nodeid[cell_part[i][j]][k]]))
+                            text_file.write(" ")
+                        text_file.write("\n")
+                    text_file.write("endelements\n")
+                    text_file.write("nodes\n")
+                    for j in range(len(node_part[i])):
+                        text_file.write(str(nodes[node_part[i][j]][0])+" "+str(nodes[node_part[i][j]][1])+ " "+
+                                        str(nodes[node_part[i][j]][2])+" "+str(ghost_nodes[node_part[i][j]]))
+                        text_file.write("\n")
+                    text_file.write("endnodes\n")
+                    text_file.write("halosint\n")
+                    for j in range(len(neighsub[i])):
+                        for k in range(len(haloint[(i, neighsub[i][j])])):
+                            text_file.write(str(haloint[(i, neighsub[i][j])][k]))
+                            text_file.write("\n")
+                    text_file.write("endhalosint\n")
+                    text_file.write("halosext\n")
+                    for j in range(len(neighsub[i])):
+                        for k in range(len(haloext[(i, neighsub[i][j])])):
+                            text_file.write(str(haloext[(i, neighsub[i][j])][k])+" " )
+                            for m in range(dim+1):
+                                text_file.write(str(cell_nodeid[haloext[(i, neighsub[i][j])][k]][m]))
+                                text_file.write(" ")
+                            text_file.write("\n")
+                    text_file.write("endhalosext\n")
+                    text_file.write("centvol\n")
+                    np.savetxt(text_file, centvol[i])
+                    text_file.write("endcentvol\n")
+                    text_file.write("globalcelltolocal\n")
+                    for j in range(len(cell_part[i])):
+                        text_file.write(str(globcelltoloc[i, j]))
+                        text_file.write("\n")
+                    text_file.write("endglobalcelltolocal\n")
+                    text_file.write("localnodetoglobal\n")
+                    for j in range(len(node_part[i])):
+                        text_file.write(str(locnodetoglob[i, j]))
+                        text_file.write("\n")
+                    text_file.write("endlocalnodetoglobal\n")
+                    text_file.write("neigh\n")
+                    for j in range(len(neighsub[i])):
+                        text_file.write(str(neighsub[i][j])+ " ")
+                    text_file.write("\n")
+                    for j in neighsub[i]:
+                        text_file.write(str(len(haloint[(i, j)]))+ " ")
+                    text_file.write("\n")
+                    text_file.write("endneigh\n")   
+    
+            filename = os.path.join(MESH_DIR, "mesh_master.txt")
+            with open(filename, "a") as text_file:
+                
+                text_file.write("nodeparts\n")
+                for j in range(len(npart)):
+                    for k in range(len(npart[j])):
+                        text_file.write(str(npart[j][k])+ " ")
+                    text_file.write("\n")
+                text_file.write("endnodeparts\n")   
+    
+    comm.Barrier()

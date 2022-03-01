@@ -36,14 +36,42 @@ packages = find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"])
 # ...
 
 # Dependencies
+#install_requires = [
+#    'numpy',
+#    'meshio<4',
+#    'mpi4py',
+#    'mgmetis',
+#    'numba==0.53.0',
+#    'scipy',
+#    ]
+
 install_requires = [
-    'numpy',
-    'meshio<4',
+    'wheel',
     'mpi4py',
-    'mgmetis',
-    'numba>0.4',
-    'scipy',
-    #'timeit',
+    'Arpeggio==1.10.2',
+    'cycler==0.11.0',
+    'Cython==0.29.24',
+    'filelock==3.3.2',
+    'h5py==3.5.0',
+    'kiwisolver==1.3.2',
+    'llvmlite==0.36.0',
+    'lxml==4.6.4',
+    'matplotlib==3.4.3',
+    'meshio==3.1.1',
+    'mpmath==1.2.1',
+    'numba==0.53.0',
+    'numpy==1.21.4',
+    'Pillow==8.4.0',
+    'pyccel==1.4.1',
+    'pyparsing==3.0.4',
+    'python-dateutil==2.8.2',
+    'scipy==1.7.2',
+    'six==1.16.0',
+    'sympy==1.9',
+    'termcolor==1.1.0',
+    'textX==2.3.0',
+    'mgmetis==0.1.1',
+    'pymumps==0.3.2'
     ]
 
 def setup_package():

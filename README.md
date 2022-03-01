@@ -1,6 +1,8 @@
-[![Build Status](https://travis-ci.org/pyccel/manapy.svg?branch=master)](https://travis-ci.org/pyccel/manapy)
+[![Build Status](https://travis-ci.org/imadki/manapy.svg?branch=manapy_hpc)](https://travis-ci.org/imadki/manapy)
+
+
 # manapy
-Coming soon
+MANAPY is a Python 3 Library for Finite Volume
 
 # install
 
@@ -10,10 +12,17 @@ run
 python3 -m pip install --user -e .
 ```
 
-run tests using
+pyccelize functions
 
 ```python
-python3 -m pytest manapy 
+./run_pyccel.sh
 ```
 
+# Using Mumps solver
+
+sudo apt install libmumps-ptscotch-5.2.1
+
+# Using petsc4py solver
+
+https://petsc.org/release/install/
 
