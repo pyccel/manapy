@@ -62,7 +62,7 @@ class StreamerModel():
         self.Ez = self.varbs['Ez']
         self.P = self.varbs['P']
         
-    def initiate_model(self, solver=None, debug=None):
+    def initiate_LS(self, solver=None, debug=None):
         if solver is None:
             solver = "spsolve"
             
