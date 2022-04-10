@@ -200,9 +200,13 @@ def update_haloghost_info_2d(nodes, cells, halos, nbnodes, halonodes):
         if len(nodes._ghostcenter[i]) == 0 :
                 nodes._ghostcenter[i].append([-1, -1., -1., -1., -1])
                 nodes._ghostfaceinfo[i].append([-1., -1., -1. , -1.])
-                
+    
+    maxhaloGhostCell = 0
     for i in range(nbnodes):
-        iterator = maxGhostCell - len(nodes._haloghostcenter[i])
+        maxhaloGhostCell = max(maxhaloGhostCell, len(nodes._haloghostcenter[i]))
+        
+    for i in range(nbnodes):
+        iterator = maxhaloGhostCell - len(nodes._haloghostcenter[i])
         for k in range(iterator):
             nodes._haloghostcenter[i].append([-1., -1., -1., -1, -1])
             nodes._haloghostfaceinfo[i].append([-1., -1., -1. , -1.])
