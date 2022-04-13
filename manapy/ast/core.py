@@ -339,7 +339,78 @@ class Variable():
         self.neumannfaces = np.asarray(self.neumannfaces, dtype=np.int64)
         self.BCdirichlet = np.asarray(self.BCdirichlet)
         self.BCneumann = np.asarray(self.BCneumann)
+    
+    def __str__(self):
+        """Pretty printing"""
+        txt = '\n'
+        txt += '> dim   :: {dim}\n'.format(dim=self.dim)
+        txt += '> total cells  :: {cells}\n'.format(cells=self.nbcells)
+        txt += '> total nodes  :: {nodes}\n'.format(nodes=self.nbnodes)
+        txt += '> total faces  :: {faces}\n'.format(faces=self.nbfaces)
+        txt += '> Value on cells :: {faces}\n'.format(faces=self.cell)
+        txt += '> Value on faces  :: {faces}\n'.format(faces=self.face)
+        txt += '> Value on nodes  :: {faces}\n'.format(faces=self.node)
+        txt += '> Value on ghosts  :: {faces}\n'.format(faces=self.ghost)
+
+        return txt
+    
+    def __add__(self, other):
+       
+        res = Variable(self.domain)
+
+        res.cell  = self.cell + other.cell
+        # res.node  = self.node + other.node
+        # res.face  = self.face + other.face
+        # res.ghost = self.ghost + other.ghost
+        # res.halo  = self.halo + other.halo
+
+        return res
+    
+    def __sub__(self, other):
+       
+        res = Variable(self.domain)
+
+        res.cell  = self.cell - other.cell
+        # res.node  = self.node - other.node
+        # res.face  = self.face - other.face
+        # res.ghost = self.ghost - other.ghost
+        # res.halo  = self.halo - other.halo
+
+        return res
+    
+    def __mul__(self, other):
+       
+        res = Variable(self.domain)
+
+        res.cell  = self.cell * other.cell
+        # res.node  = self.node * other.node
+        # res.face  = self.face * other.face
+        # res.ghost = self.ghost * other.ghost
+        # res.halo  = self.halo * other.halo
+
+        return res
+    
+    def __truediv__(self, other):
+       
+        res = Variable(self.domain)
+
+        if (other.cell != 0).all():
+            res.cell  = self.cell / other.cell
+        else:
+            raise ValueError("Values of denominator must be different to 0")
         
+        # if (other.node != 0).all():
+        #     res.node  = self.node / other.node
+        
+        # if (other.node != 0).all():
+        #     res.face  = self.face / other.face
+        
+        # if (other.node != 0).all():
+        #     res.ghost = self.ghost / other.ghost
+        # res.halo  = self.halo / other.halo
+
+        return res
+    
     def update_values(self, value=None):
         
         self.update_halo_value()
